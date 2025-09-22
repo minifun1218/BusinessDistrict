@@ -1,4 +1,4 @@
-// 百度地图API动态加载器
+// 地图API动态加载器 - 支持高德地图
 import { ENV_CONFIG } from '../config/env.js'
 
 let loadPromise = null
@@ -6,10 +6,10 @@ let isLoading = false
 let isLoaded = false
 
 /**
- * 动态加载百度地图API
+ * 动态加载高德地图API
  * @returns {Promise<boolean>} 加载是否成功
  */
-export function loadBaiduMapAPI() {
+export function loadAmapAPI() {
   // 如果已经加载过，直接返回结果
   if (isLoaded) {
     return Promise.resolve(true)
@@ -21,9 +21,9 @@ export function loadBaiduMapAPI() {
   }
   
   // 检查API密钥
-  const apiKey = ENV_CONFIG.BAIDU_MAP_CONFIG.ak
-  if (!apiKey || apiKey.trim() === '' || apiKey === 'YOUR_BAIDU_MAP_API_KEY') {
-    console.warn('百度地图API密钥未配置')
+  const apiKey = ENV_CONFIG.AMAP_CONFIG.key
+  if (!apiKey || apiKey.trim() === '' || apiKey === 'YOUR_AMAP_API_KEY') {
+    console.warn('高德地图API密钥未配置')
     return Promise.resolve(false)
   }
   
@@ -31,30 +31,30 @@ export function loadBaiduMapAPI() {
   
   loadPromise = new Promise((resolve) => {
     try {
-      // 创建script标签
+      // 创建script标签加载高德地图API
       const script = document.createElement('script')
       script.type = 'text/javascript'
-      script.src = `https://api.map.baidu.com/api?v=3.0&ak=${apiKey}&callback=initBaiduMap`
+      script.src = `https://webapi.amap.com/maps?v=2.0&key=${apiKey}&callback=initAmap`
       
       // 设置全局回调函数
-      window.initBaiduMap = () => {
-        console.log('百度地图API加载成功')
+      window.initAmap = () => {
+        console.log('高德地图API加载成功')
         isLoaded = true
         isLoading = false
         resolve(true)
         
         // 清理全局回调
-        delete window.initBaiduMap
+        delete window.initAmap
       }
       
       // 处理加载失败
       script.onerror = () => {
-        console.error('百度地图API加载失败')
+        console.error('高德地图API加载失败')
         isLoading = false
         resolve(false)
         
         // 清理全局回调
-        delete window.initBaiduMap
+        delete window.initAmap
       }
       
       // 添加到页面
@@ -63,17 +63,17 @@ export function loadBaiduMapAPI() {
       // 设置超时
       setTimeout(() => {
         if (isLoading) {
-          console.error('百度地图API加载超时')
+          console.error('高德地图API加载超时')
           isLoading = false
           resolve(false)
           
           // 清理全局回调
-          delete window.initBaiduMap
+          delete window.initAmap
         }
       }, 10000) // 10秒超时
       
     } catch (error) {
-      console.error('加载百度地图API时出错:', error)
+      console.error('加载高德地图API时出错:', error)
       isLoading = false
       resolve(false)
     }
@@ -83,11 +83,11 @@ export function loadBaiduMapAPI() {
 }
 
 /**
- * 检查百度地图API是否可用
+ * 检查高德地图API是否可用
  * @returns {boolean}
  */
-export function isBaiduMapAvailable() {
-  return isLoaded && window.BMap && typeof window.BMap.Map === 'function'
+export function isAmapAvailable() {
+  return isLoaded && window.AMap && typeof window.AMap.Map === 'function'
 }
 
 /**
@@ -97,4 +97,15 @@ export function resetLoadState() {
   loadPromise = null
   isLoading = false
   isLoaded = false
+}
+
+// 保留百度地图API加载器的兼容性函数
+export function loadBaiduMapAPI() {
+  console.warn('已切换到高德地图，百度地图API加载器已弃用')
+  return loadAmapAPI()
+}
+
+export function isBaiduMapAvailable() {
+  console.warn('已切换到高德地图，百度地图API检查已弃用')
+  return isAmapAvailable()
 }

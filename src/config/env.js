@@ -6,12 +6,24 @@ export const ENV_CONFIG = {
   // WebSocket URL
   WEBSOCKET_URL: 'ws://localhost:3000/ws',
   
-  // 地图API密钥 - 开发环境可以使用测试密钥或留空
-  MAP_API_KEY: 'O7g5t8aZEqcNICpKttmBl7ZkcNVtsx3p',
+  // 地图API密钥 - 高德地图API密钥
+  MAP_API_KEY: '97407716929403378fa9e42d20c9b051',
   
-  // 百度地图配置
+  // 高德地图配置
+  AMAP_CONFIG: {
+    key: '97407716929403378fa9e42d20c9b051', // 高德地图API密钥
+    version: '2.0',
+    defaultCenter: [116.4074, 39.9042], // 北京 [lng, lat]
+    defaultZoom: 11,
+    enableScrollWheelZoom: true,
+    enableContinuousZoom: true,
+    enableInertialDragging: true,
+    plugins: ['AMap.Scale', 'AMap.ToolBar', 'AMap.MapType', 'AMap.Geolocation']
+  },
+  
+  // 保留百度地图配置以防需要回退
   BAIDU_MAP_CONFIG: {
-    ak: 'O7g5t8aZEqcNICpKttmBl7ZkcNVtsx3p', // 请在这里填入你的百度地图API密钥
+    ak: 'O7g5t8aZEqcNICpKttmBl7ZkcNVtsx3p', // 百度地图API密钥
     version: '3.0',
     defaultCenter: { lng: 116.4074, lat: 39.9042 }, // 北京
     defaultZoom: 11,

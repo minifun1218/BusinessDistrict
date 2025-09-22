@@ -93,9 +93,9 @@
         </div>
       </div>
 
-      <!-- 中央百度地图选择器 -->
+      <!-- 中央高德地图选择器 -->
       <div class="center-map">
-        <BaiduMap
+        <AmapComponent
           v-model="mapCenter"
           :height="'100%'"
           :business-areas="businessAreas"
@@ -314,7 +314,7 @@
 import { ref, onMounted, nextTick, watch } from 'vue'
 import * as echarts from 'echarts'
 import CitySelector from './CitySelector.vue'
-import BaiduMap from './BaiduMap.vue'
+import AmapComponent from './AmapComponent.vue'
 import { analyticsApi } from '../api/analytics'
 import { authApi } from '../api/auth'
 import { businessApi } from '../api/business'

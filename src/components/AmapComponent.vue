@@ -1,5 +1,5 @@
 <template>
-  <div class="baidu-map-container">
+  <div class="amap-container">
     <!-- 地图控制面板 -->
     <div class="map-controls">
       <!-- 城市选择器 -->
@@ -52,8 +52,8 @@
       </div>
     </div>
     
-    <!-- 百度地图容器 -->
-    <div ref="baiduMapContainer" class="baidu-map" :style="{ height: mapHeight }"></div>
+    <!-- 高德地图容器 -->
+    <div ref="amapContainer" class="amap" :style="{ height: mapHeight }"></div>
     
     <!-- 地图图例 -->
     <div class="map-legend">
@@ -104,7 +104,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { ENV_CONFIG } from '../config/env.js'
-import { loadBaiduMapAPI, isBaiduMapAvailable } from '../utils/mapLoader.js'
+import { loadAmapAPI, isAmapAvailable } from '../utils/mapLoader.js'
 import CitySelector from './CitySelector.vue'
 
 // Props
@@ -131,7 +131,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'area-selected', 'location-changed', 'city-changed'])
 
 // 响应式数据
-const baiduMapContainer = ref(null)
+const amapContainer = ref(null)
 const map = ref(null)
 const markers = ref([])
 const searchKeyword = ref('')
@@ -141,34 +141,27 @@ const mapHeight = ref(props.height)
 const selectedCity = ref(props.currentCity)
 
 // 地图初始化
-const initBaiduMap = () => {
-  console.log('开始初始化百度地图...')
-  console.log('API密钥:', ENV_CONFIG.BAIDU_MAP_CONFIG.ak ? '已配置' : '未配置')
+const initAmap = () => {
+  console.log('开始初始化高德地图...')
+  console.log('API密钥:', ENV_CONFIG.AMAP_CONFIG.key ? '已配置' : '未配置')
   
   // 检查DOM元素
-  if (!baiduMapContainer.value) {
+  if (!amapContainer.value) {
     console.error('地图容器DOM元素未找到，延迟重试...')
-    setTimeout(() => initBaiduMap(), 200)
+    setTimeout(() => initAmap(), 200)
     return
   }
 
   // 检查API密钥
-  if (!ENV_CONFIG.BAIDU_MAP_CONFIG.ak || ENV_CONFIG.BAIDU_MAP_CONFIG.ak.trim() === '') {
-    console.warn('百度地图API密钥未配置，显示占位符')
+  if (!ENV_CONFIG.AMAP_CONFIG.key || ENV_CONFIG.AMAP_CONFIG.key.trim() === '') {
+    console.warn('高德地图API密钥未配置，显示占位符')
     showMapPlaceholder()
     return
   }
 
-  // 检查百度地图API
-  if (!window.BMap) {
-    console.error('百度地图API未加载，显示占位符')
-    showMapPlaceholder()
-    return
-  }
-
-  // 检查BMap.Map构造函数
-  if (typeof window.BMap.Map !== 'function') {
-    console.error('百度地图Map构造函数不可用')
+  // 检查高德地图API
+  if (!window.AMap) {
+    console.error('高德地图API未加载，显示占位符')
     showMapPlaceholder()
     return
   }
@@ -177,70 +170,61 @@ const initBaiduMap = () => {
     console.log('创建地图实例...')
     
     // 清空容器内容
-    if (baiduMapContainer.value) {
-      baiduMapContainer.value.innerHTML = ''
+    if (amapContainer.value) {
+      amapContainer.value.innerHTML = ''
     }
 
-    // 创建地图实例 - 添加更详细的错误捕获
-    map.value = new window.BMap.Map(baiduMapContainer.value, {
-      enableMapClick: true
+    // 创建地图实例
+    map.value = new window.AMap.Map(amapContainer.value, {
+      zoom: ENV_CONFIG.AMAP_CONFIG.defaultZoom,
+      center: ENV_CONFIG.AMAP_CONFIG.defaultCenter,
+      mapStyle: 'amap://styles/normal',
+      features: ['bg', 'road', 'building', 'point']
     })
     
-    // 设置地图中心点和缩放级别
-    const center = new window.BMap.Point(props.modelValue.lng, props.modelValue.lat)
-    map.value.centerAndZoom(center, ENV_CONFIG.BAIDU_MAP_CONFIG.defaultZoom)
-    
-    // 启用地图功能
-    map.value.enableScrollWheelZoom(ENV_CONFIG.BAIDU_MAP_CONFIG.enableScrollWheelZoom)
-    map.value.enableContinuousZoom(ENV_CONFIG.BAIDU_MAP_CONFIG.enableContinuousZoom)
-    map.value.enableInertialDragging(ENV_CONFIG.BAIDU_MAP_CONFIG.enableInertialDragging)
-    
     // 添加地图控件
-    map.value.addControl(new window.BMap.NavigationControl())
-    map.value.addControl(new window.BMap.ScaleControl())
-    map.value.addControl(new window.BMap.OverviewMapControl())
-    map.value.addControl(new window.BMap.MapTypeControl())
+    const toolbar = new window.AMap.ToolBar()
+    const scale = new window.AMap.Scale()
+    const mapType = new window.AMap.MapType()
+    
+    map.value.addControl(toolbar)
+    map.value.addControl(scale)
+    map.value.addControl(mapType)
     
     // 添加地图点击事件
-    map.value.addEventListener('click', handleMapClick)
+    map.value.on('click', handleMapClick)
     
     // 添加地图移动事件
-    map.value.addEventListener('moveend', handleMapMoveEnd)
+    map.value.on('moveend', handleMapMoveEnd)
     
     // 加载商圈标记
     loadBusinessAreaMarkers()
     
-    console.log('百度地图初始化成功')
+    console.log('高德地图初始化成功')
   } catch (error) {
-    console.error('百度地图初始化失败:', error)
-    
-    // 根据错误类型显示不同的占位符
-    if (error.message && error.message.includes('coordType')) {
-      showMapPlaceholder('API密钥授权失败')
-    } else {
-      showMapPlaceholder('地图初始化失败')
-    }
+    console.error('高德地图初始化失败:', error)
+    showMapPlaceholder('地图初始化失败')
   }
 }
 
 // 显示地图占位符
-const showMapPlaceholder = (reason = '百度地图API密钥未配置') => {
-  if (baiduMapContainer.value) {
+const showMapPlaceholder = (reason = '高德地图API密钥未配置') => {
+  if (amapContainer.value) {
     let message = ''
     let instruction = ''
     
     if (reason === 'API密钥授权失败') {
-      message = '百度地图API密钥授权失败'
-      instruction = '请检查API密钥是否正确，并确保已在百度地图控制台中启用JavaScript API服务'
+      message = '高德地图API密钥授权失败'
+      instruction = '请检查API密钥是否正确，并确保已在高德开放平台中启用Web服务API'
     } else if (reason === '地图初始化失败') {
       message = '地图初始化失败'
       instruction = '请检查网络连接和API密钥配置'
     } else {
       message = reason
-      instruction = '请在 src/config/env.js 中配置正确的 BAIDU_MAP_CONFIG.ak'
+      instruction = '请在 src/config/env.js 中配置正确的 AMAP_CONFIG.key'
     }
     
-    baiduMapContainer.value.innerHTML = `
+    amapContainer.value.innerHTML = `
       <div style="
         width: 100%; 
         height: 100%; 
@@ -271,57 +255,62 @@ const showMapPlaceholder = (reason = '百度地图API密钥未配置') => {
 
 // 地图点击事件处理
 const handleMapClick = (e) => {
-  const point = e.point
-  console.log('地图点击坐标:', point.lng, point.lat)
+  const lnglat = e.lnglat
+  console.log('地图点击坐标:', lnglat.getLng(), lnglat.getLat())
   
   // 更新选中位置
-  emit('update:modelValue', { lng: point.lng, lat: point.lat })
-  emit('location-changed', { lng: point.lng, lat: point.lat })
+  emit('update:modelValue', { lng: lnglat.getLng(), lat: lnglat.getLat() })
+  emit('location-changed', { lng: lnglat.getLng(), lat: lnglat.getLat() })
   
   // 在点击位置添加标记
-  addClickMarker(point)
+  addClickMarker(lnglat)
   
   // 搜索附近的商圈
-  searchNearbyBusinessAreas(point)
+  searchNearbyBusinessAreas(lnglat)
 }
 
 // 地图移动结束事件
 const handleMapMoveEnd = () => {
   const center = map.value.getCenter()
-  emit('update:modelValue', { lng: center.lng, lat: center.lat })
+  emit('update:modelValue', { lng: center.getLng(), lat: center.getLat() })
 }
 
 // 添加点击标记
-const addClickMarker = (point) => {
+const addClickMarker = (lnglat) => {
   if (!map.value) return
   
   // 清除之前的点击标记
   markers.value.forEach(marker => {
     if (marker.isClickMarker) {
-      map.value.removeOverlay(marker)
+      map.value.remove(marker)
     }
   })
   
   // 创建新的点击标记
-  const marker = new window.BMap.Marker(point)
+  const marker = new window.AMap.Marker({
+    position: lnglat,
+    title: '选中位置'
+  })
   marker.isClickMarker = true
-  map.value.addOverlay(marker)
+  map.value.add(marker)
   
   // 添加到标记数组
   markers.value.push(marker)
   
   // 创建信息窗口
-  const infoWindow = new window.BMap.InfoWindow(`
-    <div style="padding: 10px;">
-      <h4>选中位置</h4>
-      <p>经度: ${point.lng.toFixed(6)}</p>
-      <p>纬度: ${point.lat.toFixed(6)}</p>
-      <button onclick="searchNearby()" style="margin-top: 10px; padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 4px;">搜索附近商圈</button>
-    </div>
-  `)
+  const infoWindow = new window.AMap.InfoWindow({
+    content: `
+      <div style="padding: 10px;">
+        <h4>选中位置</h4>
+        <p>经度: ${lnglat.getLng().toFixed(6)}</p>
+        <p>纬度: ${lnglat.getLat().toFixed(6)}</p>
+        <button onclick="searchNearby()" style="margin-top: 10px; padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 4px;">搜索附近商圈</button>
+      </div>
+    `
+  })
   
-  marker.addEventListener('click', () => {
-    map.value.openInfoWindow(infoWindow, point)
+  marker.on('click', () => {
+    infoWindow.open(map.value, lnglat)
   })
 }
 
@@ -330,40 +319,53 @@ const loadBusinessAreaMarkers = () => {
   if (!map.value || !props.businessAreas.length) return
   
   props.businessAreas.forEach(area => {
-    const point = new window.BMap.Point(area.longitude, area.latitude)
+    const position = [area.longitude, area.latitude]
     
-    // 根据热度值选择图标
-    let iconUrl = '/icons/marker-cool.png' // 默认冷门
+    // 根据热度值选择颜色
+    let color = '#2196f3' // 默认蓝色（冷门）
     if (area.hotValue > 80) {
-      iconUrl = '/icons/marker-hot.png'
+      color = '#ff4444' // 红色（热门）
     } else if (area.hotValue > 50) {
-      iconUrl = '/icons/marker-warm.png'
+      color = '#ff9800' // 橙色（一般）
     }
     
-    // 创建自定义图标
-    const icon = new window.BMap.Icon(iconUrl, new window.BMap.Size(25, 35))
-    const marker = new window.BMap.Marker(point, { icon })
+    // 创建标记
+    const marker = new window.AMap.Marker({
+      position: position,
+      title: area.name,
+      icon: new window.AMap.Icon({
+        size: new window.AMap.Size(25, 35),
+        image: `data:image/svg+xml;base64,${btoa(`
+          <svg width="25" height="35" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 12.5 12.5 22.5 12.5 22.5s12.5-10 12.5-22.5C25 5.6 19.4 0 12.5 0z" fill="${color}"/>
+            <circle cx="12.5" cy="12.5" r="6" fill="white"/>
+          </svg>
+        `)}`
+      })
+    })
     
     // 添加点击事件
-    marker.addEventListener('click', () => {
+    marker.on('click', () => {
       selectBusinessArea(area)
       
       // 显示信息窗口
-      const infoWindow = new window.BMap.InfoWindow(`
-        <div style="padding: 15px; min-width: 200px;">
-          <h4 style="margin: 0 0 10px 0; color: #333;">${area.name}</h4>
-          <p style="margin: 5px 0;"><strong>热度值:</strong> ${area.hotValue}</p>
-          <p style="margin: 5px 0;"><strong>商家数量:</strong> ${area.storeCount}</p>
-          <p style="margin: 5px 0;"><strong>平均消费:</strong> ¥${area.avgConsumption}</p>
-          <p style="margin: 5px 0;"><strong>类型:</strong> ${area.category}</p>
-          <button onclick="viewDetails('${area.id}')" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">查看详情</button>
-        </div>
-      `)
+      const infoWindow = new window.AMap.InfoWindow({
+        content: `
+          <div style="padding: 15px; min-width: 200px;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">${area.name}</h4>
+            <p style="margin: 5px 0;"><strong>热度值:</strong> ${area.hotValue}</p>
+            <p style="margin: 5px 0;"><strong>商家数量:</strong> ${area.storeCount}</p>
+            <p style="margin: 5px 0;"><strong>平均消费:</strong> ¥${area.avgConsumption}</p>
+            <p style="margin: 5px 0;"><strong>类型:</strong> ${area.category}</p>
+            <button onclick="viewDetails('${area.id}')" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">查看详情</button>
+          </div>
+        `
+      })
       
-      map.value.openInfoWindow(infoWindow, point)
+      infoWindow.open(map.value, position)
     })
     
-    map.value.addOverlay(marker)
+    map.value.add(marker)
     markers.value.push(marker)
   })
 }
@@ -374,67 +376,76 @@ const selectBusinessArea = (area) => {
   emit('area-selected', area)
   
   // 移动地图到选中区域
-  const point = new window.BMap.Point(area.longitude, area.latitude)
-  map.value.panTo(point)
+  map.value.setCenter([area.longitude, area.latitude])
 }
 
 // 搜索位置
 const searchLocation = () => {
   if (!searchKeyword.value.trim()) return
   
-  const localSearch = new window.BMap.LocalSearch(map.value, {
-    onSearchComplete: (results) => {
-      if (localSearch.getStatus() === window.BMAP_STATUS_SUCCESS) {
-        const poi = results.getPoi(0)
-        if (poi) {
-          const point = poi.point
-          map.value.centerAndZoom(point, 15)
-          
-          // 添加搜索结果标记
-          const marker = new window.BMap.Marker(point)
-          map.value.addOverlay(marker)
-          markers.value.push(marker)
-          
-          // 更新选中位置
-          emit('update:modelValue', { lng: point.lng, lat: point.lat })
-          emit('location-changed', { lng: point.lng, lat: point.lat })
-        }
+  window.AMap.plugin('AMap.PlaceSearch', () => {
+    const placeSearch = new window.AMap.PlaceSearch({
+      pageSize: 10,
+      pageIndex: 1,
+      city: selectedCity.value.name
+    })
+    
+    placeSearch.search(searchKeyword.value, (status, result) => {
+      if (status === 'complete' && result.poiList && result.poiList.pois.length > 0) {
+        const poi = result.poiList.pois[0]
+        const position = [poi.location.lng, poi.location.lat]
+        
+        map.value.setCenter(position)
+        map.value.setZoom(15)
+        
+        // 添加搜索结果标记
+        const marker = new window.AMap.Marker({
+          position: position,
+          title: poi.name
+        })
+        map.value.add(marker)
+        markers.value.push(marker)
+        
+        // 更新选中位置
+        emit('update:modelValue', { lng: poi.location.lng, lat: poi.location.lat })
+        emit('location-changed', { lng: poi.location.lng, lat: poi.location.lat })
       }
-    }
+    })
   })
-  
-  localSearch.search(searchKeyword.value)
 }
 
 // 获取当前位置
 const getCurrentLocation = () => {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const point = new window.BMap.Point(position.coords.longitude, position.coords.latitude)
-        map.value.centerAndZoom(point, 15)
-        
-        // 添加当前位置标记
-        const marker = new window.BMap.Marker(point)
-        map.value.addOverlay(marker)
-        markers.value.push(marker)
-        
-        emit('update:modelValue', { lng: point.lng, lat: point.lat })
-      },
-      (error) => {
-        console.error('获取位置失败:', error)
+  window.AMap.plugin('AMap.Geolocation', () => {
+    const geolocation = new window.AMap.Geolocation({
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+      convert: true,
+      showButton: true,
+      buttonPosition: 'LB',
+      showMarker: true,
+      showCircle: true,
+      panToLocation: true,
+      zoomToAccuracy: true
+    })
+    
+    geolocation.getCurrentPosition((status, result) => {
+      if (status === 'complete') {
+        const position = result.position
+        emit('update:modelValue', { lng: position.lng, lat: position.lat })
+      } else {
+        console.error('获取位置失败:', result)
         alert('获取位置失败，请检查浏览器定位权限')
       }
-    )
-  } else {
-    alert('浏览器不支持地理定位')
-  }
+    })
+  })
 }
 
 // 清除标记
 const clearMarkers = () => {
   markers.value.forEach(marker => {
-    map.value.removeOverlay(marker)
+    map.value.remove(marker)
   })
   markers.value = []
   selectedArea.value = null
@@ -444,21 +455,21 @@ const clearMarkers = () => {
 const updateSearchRadius = () => {
   // 如果有选中的位置，重新搜索附近商圈
   if (selectedArea.value) {
-    const point = new window.BMap.Point(selectedArea.value.longitude, selectedArea.value.latitude)
-    searchNearbyBusinessAreas(point)
+    const lnglat = new window.AMap.LngLat(selectedArea.value.longitude, selectedArea.value.latitude)
+    searchNearbyBusinessAreas(lnglat)
   }
 }
 
 // 搜索附近商圈
-const searchNearbyBusinessAreas = async (point) => {
+const searchNearbyBusinessAreas = async (lnglat) => {
   try {
-    console.log('搜索附近商圈:', point.lng, point.lat, searchRadius.value)
+    console.log('搜索附近商圈:', lnglat.getLng(), lnglat.getLat(), searchRadius.value)
     
     // 调用业务API搜索附近商圈
     const { businessApi } = await import('../api/business.js')
     const nearbyAreas = await businessApi.searchNearbyBusinessAreas({
-      longitude: point.lng,
-      latitude: point.lat,
+      longitude: lnglat.getLng(),
+      latitude: lnglat.getLat(),
       radius: searchRadius.value
     })
     
@@ -466,8 +477,8 @@ const searchNearbyBusinessAreas = async (point) => {
     
     // 通知父组件更新商圈数据
     emit('location-changed', { 
-      lng: point.lng, 
-      lat: point.lat,
+      lng: lnglat.getLng(), 
+      lat: lnglat.getLat(),
       nearbyAreas: nearbyAreas || []
     })
     
@@ -497,21 +508,21 @@ const updateMapCenterForCity = (city) => {
   if (!map.value) return
   
   const cityCoords = {
-    'beijing': { lng: 116.4074, lat: 39.9042 },
-    'shanghai': { lng: 121.4737, lat: 31.2304 },
-    'guangzhou': { lng: 113.2644, lat: 23.1291 },
-    'shenzhen': { lng: 114.0579, lat: 22.5431 },
-    'hangzhou': { lng: 120.1614, lat: 30.2936 },
-    'nanjing': { lng: 118.7969, lat: 32.0603 },
-    'wuhan': { lng: 114.2734, lat: 30.5801 },
-    'chengdu': { lng: 104.0668, lat: 30.5728 }
+    'beijing': [116.4074, 39.9042],
+    'shanghai': [121.4737, 31.2304],
+    'guangzhou': [113.2644, 23.1291],
+    'shenzhen': [114.0579, 22.5431],
+    'hangzhou': [120.1614, 30.2936],
+    'nanjing': [118.7969, 32.0603],
+    'wuhan': [114.2734, 30.5801],
+    'chengdu': [104.0668, 30.5728]
   }
   
   const coords = cityCoords[city.id] || cityCoords['beijing']
-  const point = new window.BMap.Point(coords.lng, coords.lat)
   
-  map.value.centerAndZoom(point, ENV_CONFIG.BAIDU_MAP_CONFIG.defaultZoom)
-  emit('update:modelValue', coords)
+  map.value.setCenter(coords)
+  map.value.setZoom(ENV_CONFIG.AMAP_CONFIG.defaultZoom)
+  emit('update:modelValue', { lng: coords[0], lat: coords[1] })
 }
 
 // 监听商圈数据变化
@@ -520,7 +531,7 @@ watch(() => props.businessAreas, () => {
     // 清除现有商圈标记
     markers.value.forEach(marker => {
       if (!marker.isClickMarker) {
-        map.value.removeOverlay(marker)
+        map.value.remove(marker)
       }
     })
     markers.value = markers.value.filter(marker => marker.isClickMarker)
@@ -533,38 +544,36 @@ watch(() => props.businessAreas, () => {
 // 监听中心点变化
 watch(() => props.modelValue, (newCenter) => {
   if (map.value && newCenter) {
-    const point = new window.BMap.Point(newCenter.lng, newCenter.lat)
-    map.value.panTo(point)
+    map.value.setCenter([newCenter.lng, newCenter.lat])
   }
 }, { deep: true })
 
 // 生命周期
 onMounted(async () => {
-  console.log('BaiduMap组件已挂载')
+  console.log('AmapComponent组件已挂载')
   await nextTick()
   
-  // 使用动态加载器加载百度地图API
+  // 使用动态加载器加载高德地图API
   try {
-    console.log('开始加载百度地图API...')
-    const loadSuccess = await loadBaiduMapAPI()
+    console.log('开始加载高德地图API...')
+    const loadSuccess = await loadAmapAPI()
     
-    if (loadSuccess && isBaiduMapAvailable()) {
-      console.log('百度地图API加载成功，开始初始化地图')
-      initBaiduMap()
+    if (loadSuccess && isAmapAvailable()) {
+      console.log('高德地图API加载成功，开始初始化地图')
+      initAmap()
     } else {
-      console.warn('百度地图API加载失败或密钥未配置')
+      console.warn('高德地图API加载失败或密钥未配置')
       showMapPlaceholder('API加载失败或密钥未配置')
     }
   } catch (error) {
-    console.error('加载百度地图API时出错:', error)
+    console.error('加载高德地图API时出错:', error)
     showMapPlaceholder('API加载出错')
   }
 })
 
 onUnmounted(() => {
   if (map.value) {
-    map.value.removeEventListener('click', handleMapClick)
-    map.value.removeEventListener('moveend', handleMapMoveEnd)
+    map.value.destroy()
   }
 })
 
@@ -583,7 +592,7 @@ window.viewDetails = (areaId) => {
 </script>
 
 <style scoped>
-.baidu-map-container {
+.amap-container {
   position: relative;
   width: 100%;
   height: 100%;
@@ -673,7 +682,7 @@ window.viewDetails = (areaId) => {
   min-width: auto;
 }
 
-.baidu-map {
+.amap {
   width: 100%;
   border-radius: 16px;
 }

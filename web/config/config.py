@@ -50,7 +50,7 @@ class Config:
     LOG_FILE = os.environ.get('LOG_FILE') or 'app.log'
     
     # 第三方API配置
-    BAIDU_MAP_AK = os.environ.get('BAIDU_MAP_AK') or 'your-baidu-map-api-key'
+    BAIDU_MAP_AK = os.environ.get('BAIDU_MAP_AK') or 'O7g5t8aZEqcNICpKttmBl7ZkcNVtsx3p'
     AMAP_KEY = os.environ.get('AMAP_KEY') or 'your-amap-api-key'
     
     # 数据分析配置

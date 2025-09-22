@@ -45,6 +45,13 @@ def create_app(config_class=Config):
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
     app.register_blueprint(crawler_bp, url_prefix='/api/crawler')
     
+    # 添加兼容性路由 - 将 /api/business 重定向到 /api/business-areas
+    @app.route('/api/business/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+    def business_redirect(path):
+        from flask import request, redirect, url_for
+        # 重定向到正确的端点
+        return redirect(f'/api/business-areas/{path}?{request.query_string.decode()}', code=301)
+    
     # 注册错误处理器
     @app.errorhandler(404)
     def not_found(error):

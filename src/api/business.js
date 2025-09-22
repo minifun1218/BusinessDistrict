@@ -59,17 +59,17 @@ export const businessApi = {
 
   // 搜索附近商圈（地图专用）
   searchNearbyBusinessAreas(params) {
-    return http.get('/business/areas/nearby', params)
+    return http.get('/business-areas/nearby', params)
   },
 
   // 获取商圈列表（按城市）
   getBusinessAreaList(cityId) {
-    return http.get('/business/areas', { city_id: cityId })
+    return http.get('/business-areas', { cityId: cityId })
   },
 
   // 获取商圈分析数据
   getAreaAnalytics(areaId) {
-    return http.get(`/business/areas/${areaId}/analytics`)
+    return http.get(`/business-areas/${areaId}/analytics`)
   }
 }
 
