@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # 创建商圈蓝图
 business_bp = Blueprint('business', __name__)
 
-@business_bp.route('', methods=['GET'])
+@business_bp.route('', methods=['GET', 'OPTIONS'])
 def get_business_areas():
     """获取商圈列表"""
     try:
@@ -81,7 +81,7 @@ def get_business_areas():
     except Exception as e:
         return error_response(f'获取商圈列表失败: {str(e)}', 500)
 
-@business_bp.route('/<area_id>', methods=['GET'])
+@business_bp.route('/<area_id>', methods=['GET', 'OPTIONS'])
 def get_business_area_by_id(area_id):
     """根据ID获取商圈详情"""
     try:
@@ -109,7 +109,7 @@ def get_business_area_by_id(area_id):
     except Exception as e:
         return error_response(f'获取商圈详情失败: {str(e)}', 500)
 
-@business_bp.route('/search', methods=['GET'])
+@business_bp.route('/search', methods=['GET', 'OPTIONS'])
 def search_business_areas():
     """搜索商圈"""
     try:
@@ -140,7 +140,7 @@ def search_business_areas():
     except Exception as e:
         return error_response(f'搜索商圈失败: {str(e)}', 500)
 
-@business_bp.route('/hot-ranking', methods=['GET'])
+@business_bp.route('/hot-ranking', methods=['GET', 'OPTIONS'])
 def get_hot_ranking():
     """获取商圈热度排行"""
     try:
@@ -171,7 +171,7 @@ def get_hot_ranking():
     except Exception as e:
         return error_response(f'获取商圈热度排行失败: {str(e)}', 500)
 
-@business_bp.route('/<area_id>/stats', methods=['GET'])
+@business_bp.route('/<area_id>/stats', methods=['GET', 'OPTIONS'])
 def get_business_area_stats(area_id):
     """获取商圈统计数据"""
     try:
@@ -209,7 +209,7 @@ def get_business_area_stats(area_id):
     except Exception as e:
         return error_response(f'获取商圈统计数据失败: {str(e)}', 500)
 
-@business_bp.route('/<area_id>/stores', methods=['GET'])
+@business_bp.route('/<area_id>/stores', methods=['GET', 'OPTIONS'])
 def get_stores_by_area(area_id):
     """获取商圈内店铺列表"""
     try:
@@ -258,7 +258,7 @@ def get_stores_by_area(area_id):
     except Exception as e:
         return error_response(f'获取商圈店铺列表失败: {str(e)}', 500)
 
-@business_bp.route('/compare', methods=['POST'])
+@business_bp.route('/compare', methods=['POST', 'OPTIONS'])
 def compare_business_areas():
     """商圈对比"""
     try:
@@ -314,7 +314,7 @@ def compare_business_areas():
     except Exception as e:
         return error_response(f'商圈对比失败: {str(e)}', 500)
 
-@business_bp.route('/nearby', methods=['GET'])
+@business_bp.route('/nearby', methods=['GET', 'OPTIONS'])
 def get_nearby_business_areas():
     """获取附近商圈"""
     try:
@@ -349,7 +349,7 @@ def get_nearby_business_areas():
         return error_response(f'获取附近商圈失败: {str(e)}', 500)
 
 
-@business_bp.route('/areas/<int:area_id>/stores', methods=['GET'])
+@business_bp.route('/areas/<int:area_id>/stores', methods=['GET', 'OPTIONS'])
 @jwt_required()
 def get_area_stores(area_id):
     """获取商圈内的商家"""
@@ -411,7 +411,7 @@ def get_area_stores(area_id):
         return error_response('获取商圈商家失败', 500)
 
 
-@business_bp.route('/areas/<int:area_id>/analytics', methods=['GET'])
+@business_bp.route('/areas/<int:area_id>/analytics', methods=['GET', 'OPTIONS'])
 @jwt_required()
 def get_area_analytics(area_id):
     """获取商圈分析数据"""

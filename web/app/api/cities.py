@@ -13,7 +13,7 @@ from app.utils.response import success_response, error_response, paginated_respo
 # 创建城市蓝图
 cities_bp = Blueprint('cities', __name__)
 
-@cities_bp.route('', methods=['GET'])
+@cities_bp.route('', methods=['GET', 'OPTIONS'])
 def get_cities():
     """获取城市列表"""
     try:
@@ -56,7 +56,7 @@ def get_cities():
     except Exception as e:
         return error_response(f'获取城市列表失败: {str(e)}', 500)
 
-@cities_bp.route('/hot', methods=['GET'])
+@cities_bp.route('/hot', methods=['GET', 'OPTIONS'])
 def get_hot_cities():
     """获取热门城市"""
     try:
@@ -70,7 +70,7 @@ def get_hot_cities():
     except Exception as e:
         return error_response(f'获取热门城市失败: {str(e)}', 500)
 
-@cities_bp.route('/<city_id>', methods=['GET'])
+@cities_bp.route('/<city_id>', methods=['GET', 'OPTIONS'])
 def get_city_by_id(city_id):
     """根据ID获取城市信息"""
     try:
@@ -84,7 +84,7 @@ def get_city_by_id(city_id):
     except Exception as e:
         return error_response(f'获取城市信息失败: {str(e)}', 500)
 
-@cities_bp.route('/search', methods=['GET'])
+@cities_bp.route('/search', methods=['GET', 'OPTIONS'])
 def search_cities():
     """搜索城市"""
     try:
@@ -111,7 +111,7 @@ def search_cities():
     except Exception as e:
         return error_response(f'搜索城市失败: {str(e)}', 500)
 
-@cities_bp.route('/location', methods=['GET'])
+@cities_bp.route('/location', methods=['GET', 'OPTIONS'])
 def get_city_by_location():
     """根据坐标获取城市信息"""
     try:
@@ -149,7 +149,7 @@ def get_city_by_location():
     except Exception as e:
         return error_response(f'获取定位城市失败: {str(e)}', 500)
 
-@cities_bp.route('/provinces', methods=['GET'])
+@cities_bp.route('/provinces', methods=['GET', 'OPTIONS'])
 def get_provinces():
     """获取省份列表"""
     try:
@@ -163,7 +163,7 @@ def get_provinces():
     except Exception as e:
         return error_response(f'获取省份列表失败: {str(e)}', 500)
 
-@cities_bp.route('/province/<province_id>', methods=['GET'])
+@cities_bp.route('/province/<province_id>', methods=['GET', 'OPTIONS'])
 def get_cities_by_province(province_id):
     """根据省份ID获取城市列表"""
     try:
@@ -177,7 +177,7 @@ def get_cities_by_province(province_id):
     except Exception as e:
         return error_response(f'获取省份城市列表失败: {str(e)}', 500)
 
-@cities_bp.route('/<city_id>/districts', methods=['GET'])
+@cities_bp.route('/<city_id>/districts', methods=['GET', 'OPTIONS'])
 def get_districts_by_city(city_id):
     """根据城市ID获取区县列表"""
     try:
@@ -191,7 +191,7 @@ def get_districts_by_city(city_id):
     except Exception as e:
         return error_response(f'获取城市区县列表失败: {str(e)}', 500)
 
-@cities_bp.route('/<city_id>/stats', methods=['GET'])
+@cities_bp.route('/<city_id>/stats', methods=['GET', 'OPTIONS'])
 def get_city_stats(city_id):
     """获取城市统计信息"""
     try:
@@ -218,7 +218,7 @@ def get_city_stats(city_id):
     except Exception as e:
         return error_response(f'获取城市统计信息失败: {str(e)}', 500)
 
-@cities_bp.route('/<city_id>/business-areas', methods=['GET'])
+@cities_bp.route('/<city_id>/business-areas', methods=['GET', 'OPTIONS'])
 def get_city_business_areas(city_id):
     """获取城市商圈概览"""
     try:
