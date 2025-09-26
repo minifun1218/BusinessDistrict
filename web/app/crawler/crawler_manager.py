@@ -11,7 +11,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 
 from app.extensions import db
-from app.models.business_area import BusinessArea, Store
+from app.models.business_area import BusinessArea
+from app.models.store import Store
 from app.models.city import City
 from .data_sources.baidu_crawler import BaiduMapCrawler
 from .data_sources.amap_crawler import AmapCrawler

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高德地图POI搜索测试</title>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=0d1192d32abfb14fa2c8f27a4c20784d&plugin=AMap.PlaceSearch,AMap.Geolocation"></script>
+    <style>
+        #container {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ccc;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        .controls input, .controls select, .controls button {
+            margin: 5px;
+            padding: 5px 10px;
+        }
+        .results {
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        .result-item {
+            margin: 5px 0;
+            padding: 8px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>高德地图POI搜索测试 - SDK内置搜索</h1>
+    
+    <div class="controls">
+        <input type="text" id="searchInput" placeholder="输入搜索关键词..." value="商圈">
+        <select id="citySelect">
+            <option value="010">北京</option>
+            <option value="021">上海</option>
+            <option value="020">广州</option>
+            <option value="0755">深圳</option>
+        </select>
+        <select id="radiusSelect">
+            <option value="1000">1公里</option>
+            <option value="3000">3公里</option>
+            <option value="5000">5公里</option>
+        </select>
+        <button onclick="searchText()">关键词搜索</button>
+        <button onclick="searchNearby()">附近搜索</button>
+        <button onclick="getCurrentLocation()">获取位置</button>
+    </div>
+    
+    <div id="container"></div>
+    
+    <div class="results" id="results">
+        <p>搜索结果将显示在这里...</p>
+    </div>
+
+    <script>
+        let map, placeSearch, geolocation;
+        let currentLocation = [116.4074, 39.9042]; // 默认北京
+
+        // 初始化地图
+        function initMap() {
+            map = new AMap.Map('container', {
+                center: currentLocation,
+                zoom: 11,
+                resizeEnable: true
+            });
+
+            // 初始化搜索服务
+            placeSearch = new AMap.PlaceSearch({
+                pageSize: 10,
+                pageIndex: 1,
+                city: document.getElementById('citySelect').value,
+                citylimit: true,
+                map: map,
+                autoFitView: false,
+                extensions: 'all'
+            });
+
+            // 初始化定位服务
+            geolocation = new AMap.Geolocation({
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0,
+                convert: true,
+                showButton: false,
+                showMarker: true,
+                showCircle: true,
+                panToLocation: true,
+                zoomToAccuracy: true
+            });
+
+            console.log('地图和搜索服务初始化完成');
+        }
+
+        // 关键词搜索
+        function searchText() {
+            const keyword = document.getElementById('searchInput').value.trim();
+            if (!keyword) {
+                alert('请输入搜索关键词');
+                return;
+            }
+
+            console.log('开始关键词搜索:', keyword);
+            
+            placeSearch.setCity(document.getElementById('citySelect').value);
+            placeSearch.search(keyword, (status, result) => {
+                console.log('搜索状态:', status, '结果:', result);
+                
+                if (status === 'complete' && result.poiList) {
+                    displayResults(result.poiList.pois, '关键词搜索');
+                } else {
+                    document.getElementById('results').innerHTML = '<p style="color: red;">搜索失败: ' + (result.info || '未知错误') + '</p>';
+                }
+            });
+        }
+
+        // 附近搜索
+        function searchNearby() {
+            const keyword = document.getElementById('searchInput').value.trim() || '商圈';
+            const radius = parseInt(document.getElementById('radiusSelect').value);
+            
+            console.log('开始附近搜索:', keyword, '半径:', radius);
+            
+            const center = new AMap.LngLat(currentLocation[0], currentLocation[1]);
+            placeSearch.searchNearBy(keyword, center, radius, (status, result) => {
+                console.log('附近搜索状态:', status, '结果:', result);
+                
+                if (status === 'complete' && result.poiList) {
+                    displayResults(result.poiList.pois, '附近搜索');
+                } else {
+                    document.getElementById('results').innerHTML = '<p style="color: red;">附近搜索失败: ' + (result.info || '未知错误') + '</p>';
+                }
+            });
+        }
+
+        // 获取当前位置
+        function getCurrentLocation() {
+            console.log('开始获取当前位置');
+            
+            geolocation.getCurrentPosition((status, result) => {
+                if (status === 'complete') {
+                    currentLocation = [result.position.getLng(), result.position.getLat()];
+                    map.setCenter(currentLocation);
+                    map.setZoom(15);
+                    
+                    console.log('定位成功:', currentLocation);
+                    document.getElementById('results').innerHTML = `<p style="color: green;">定位成功: ${currentLocation[0].toFixed(6)}, ${currentLocation[1].toFixed(6)}</p>`;
+                } else {
+                    console.error('定位失败:', result);
+                    document.getElementById('results').innerHTML = '<p style="color: red;">定位失败: ' + result.message + '</p>';
+                }
+            });
+        }
+
+        // 显示搜索结果
+        function displayResults(pois, searchType) {
+            if (!pois || pois.length === 0) {
+                document.getElementById('results').innerHTML = '<p>没有找到相关结果</p>';
+                return;
+            }
+
+            let html = `<h3>${searchType}结果 (${pois.length}个):</h3>`;
+            
+            pois.forEach((poi, index) => {
+                html += `
+                    <div class="result-item">
+                        <strong>${index + 1}. ${poi.name}</strong><br>
+                        <small>地址: ${poi.address || poi.district || '暂无地址'}</small><br>
+                        <small>类型: ${poi.type || '未知'}</small><br>
+                        ${poi.tel ? `<small>电话: ${poi.tel}</small><br>` : ''}
+                        ${poi.distance ? `<small>距离: ${Math.round(poi.distance)}米</small><br>` : ''}
+                    </div>
+                `;
+            });
+
+            document.getElementById('results').innerHTML = html;
+            console.log(`显示${searchType}结果:`, pois.length, '个');
+        }
+
+        // 页面加载完成后初始化地图
+        window.onload = function() {
+            initMap();
+        };
+    </script>
+</body>
+</html>

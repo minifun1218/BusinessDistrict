@@ -35,6 +35,12 @@ class User(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
     
+    # 关系
+    area_reviews = db.relationship('AreaReview', backref='user', lazy='dynamic')
+    store_reviews = db.relationship('StoreReview', backref='user', lazy='dynamic')
+    favorites = db.relationship('UserFavorite', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    search_history = db.relationship('SearchHistory', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    
     def to_dict(self):
         """转换为字典"""
         return {

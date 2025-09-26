@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高德地图组件测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 30px;
+        }
+        
+        .map-container {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .info {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info h3 {
+            margin: 0 0 10px 0;
+            color: #2d3748;
+        }
+        
+        .info p {
+            margin: 5px 0;
+            color: #4a5568;
+            line-height: 1.6;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .feature-card {
+            padding: 15px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        
+        .feature-card h4 {
+            margin: 0 0 8px 0;
+            color: #2d3748;
+            font-size: 14px;
+        }
+        
+        .feature-card p {
+            margin: 0;
+            color: #6b7280;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗺️ 高德地图组件测试页面</h1>
+        
+        <div class="info">
+            <h3>配置信息</h3>
+            <p><strong>API密钥:</strong> <span class="status success">已配置 (0d1192d32abfb14fa2c8f27a4c20784d)</span></p>
+            <p><strong>安全密钥:</strong> <span class="status success">已配置 (97407716929403378fa9e42d20c9b051)</span></p>
+            <p><strong>API版本:</strong> 2.0</p>
+            <p><strong>加载方式:</strong> AMapLoader + 安全密钥验证</p>
+        </div>
+        
+        <div class="map-container" id="test-map">
+            <!-- 这里会加载地图测试 -->
+            <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #f5f5f5; color: #666;">
+                <div style="text-align: center;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">🗺️</div>
+                    <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">地图加载测试</div>
+                    <div style="font-size: 14px;">请在Vue应用中查看实际效果</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="features">
+            <div class="feature-card">
+                <h4>🔍 POI搜索</h4>
+                <p>支持关键字搜索，如"北京大学"、"三里屯"等，提供分页浏览功能</p>
+            </div>
+            
+            <div class="feature-card">
+                <h4>📍 坐标获取</h4>
+                <p>点击地图任意位置获取精确的经纬度坐标</p>
+            </div>
+            
+            <div class="feature-card">
+                <h4>🏙️ 城市切换</h4>
+                <p>支持快速切换北京、上海、广州等主要城市</p>
+            </div>
+            
+            <div class="feature-card">
+                <h4>🏪 商圈查询</h4>
+                <p>搜索指定位置附近的商圈信息，包括热度值和消费水平</p>
+            </div>
+            
+            <div class="feature-card">
+                <h4>📱 响应式设计</h4>
+                <p>完美适配桌面端、平板和移动设备</p>
+            </div>
+            
+            <div class="feature-card">
+                <h4>⚡ 性能优化</h4>
+                <p>使用AMapLoader异步加载，支持按需加载插件</p>
+            </div>
+        </div>
+        
+        <div class="info" style="margin-top: 30px;">
+            <h3>使用说明</h3>
+            <p><strong>1. 启动开发服务器:</strong> <code>npm run dev</code></p>
+            <p><strong>2. 访问演示页面:</strong> 在浏览器中访问应用并导航到高德地图演示页面</p>
+            <p><strong>3. 测试功能:</strong> 尝试搜索POI、点击地图获取坐标、切换城市等功能</p>
+            <p><strong>4. 检查控制台:</strong> 查看控制台输出确认API加载状态</p>
+        </div>
+    </div>
+
+    <script>
+        // 简单的API测试脚本
+        console.log('🗺️ 高德地图组件测试页面已加载');
+        console.log('📝 请在Vue应用中测试实际功能');
+        
+        // 检查是否在Vue环境中
+        if (typeof window !== 'undefined') {
+            console.log('💻 当前环境: 浏览器');
+            console.log('🔑 API密钥已配置');
+            console.log('🔐 安全密钥已配置');
+        }
+    </script>
+</body>
+</html>

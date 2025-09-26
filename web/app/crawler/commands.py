@@ -240,7 +240,7 @@ def check_data_quality():
         ).count()
         
         # 统计店铺数据
-        from app.models.business_area import Store
+        from app.models.store import Store
         total_stores = Store.query.count()
         stores_with_rating = Store.query.filter(Store.rating > 0).count()
         

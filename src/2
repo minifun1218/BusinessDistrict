@@ -1,0 +1,2311 @@
+<template>
+  <div class="dashboard-container page-enter">
+    <!-- 标题栏 -->
+    <header class="dashboard-header modern-nav">
+      <div class="header-left">
+        <div class="header-title">
+          <h1 class="modern-title">城市商圈消费热度可视化分析系统</h1>
+          <div class="header-info">
+            <span>更新时间：{{ updateTime }}</span>
+            <span class="separator">|</span>
+            <span>数据状态：<span :class="dataStatus.online ? 'status-online' : 'status-offline'">{{ dataStatus.text }}</span></span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="header-right">
+        <div class="user-actions" v-if="!isLoggedIn">
+          <button @click="showLogin = true" class="modern-btn outline">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M15 3H19C20.1046 3 21 3.89543 21 5V19C21 20.1046 20.1046 21 19 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            登录
+          </button>
+          <button @click="showRegister = true" class="modern-btn primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="8.5" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M20 8V14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M23 11H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            注册
+          </button>
+        </div>
+        
+        <div class="user-profile" v-else>
+          <div class="profile-dropdown">
+            <button @click="showUserMenu = !showUserMenu" class="profile-btn">
+              <div class="avatar">
+                <img :src="userInfo.avatar || '/default-avatar.png'" :alt="userInfo.name" />
+              </div>
+              <span>{{ userInfo.name }}</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            
+            <div v-if="showUserMenu" class="dropdown-menu fade-in">
+              <a href="#" class="dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                个人中心
+              </a>
+              <a href="#" class="dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                  <path d="M19.4 15C19.2669 15.3016 19.2272 15.6362 19.286 15.9606C19.3448 16.285 19.4995 16.5843 19.73 16.82L19.79 16.88C19.976 17.0657 20.1235 17.2863 20.2241 17.5291C20.3248 17.7719 20.3766 18.0322 20.3766 18.295C20.3766 18.5578 20.3248 18.8181 20.2241 19.0609C20.1235 19.3037 19.976 19.5243 19.79 19.71C19.6043 19.896 19.3837 20.0435 19.1409 20.1441C18.8981 20.2448 18.6378 20.2966 18.375 20.2966C18.1122 20.2966 17.8519 20.2448 17.6091 20.1441C17.3663 20.0435 17.1457 19.896 16.96 19.71L16.9 19.65C16.6643 19.4195 16.365 19.2648 16.0406 19.206C15.7162 19.1472 15.3816 19.1869 15.08 19.32C14.7842 19.4468 14.532 19.6572 14.3543 19.9255C14.1766 20.1938 14.0813 20.5082 14.08 20.83V21C14.08 21.5304 13.8693 22.0391 13.4942 22.4142C13.1191 22.7893 12.6104 23 12.08 23C11.5496 23 11.0409 22.7893 10.6658 22.4142C10.2907 22.0391 10.08 21.5304 10.08 21V20.91C10.0723 20.579 9.96512 20.258 9.77251 19.9887C9.5799 19.7194 9.31074 19.5143 9 19.4C8.69838 19.2669 8.36381 19.2272 8.03941 19.286C7.71502 19.3448 7.41568 19.4995 7.18 19.73L7.12 19.79C6.93425 19.976 6.71368 20.1235 6.47088 20.2241C6.22808 20.3248 5.96783 20.3766 5.705 20.3766C5.44217 20.3766 5.18192 20.3248 4.93912 20.2241C4.69632 20.1235 4.47575 19.976 4.29 19.79C4.10405 19.6043 3.95653 19.3837 3.85588 19.1409C3.75523 18.8981 3.70343 18.6378 3.70343 18.375C3.70343 18.1122 3.75523 17.8519 3.85588 17.6091C3.95653 17.3663 4.10405 17.1457 4.29 16.96L4.35 16.9C4.58054 16.6643 4.73519 16.365 4.794 16.0406C4.85282 15.7162 4.81312 15.3816 4.68 15.08C4.55324 14.7842 4.34276 14.532 4.07447 14.3543C3.80618 14.1766 3.49179 14.0813 3.17 14.08H3C2.46957 14.08 1.96086 13.8693 1.58579 13.4942C1.21071 13.1191 1 12.6104 1 12.08C1 11.5496 1.21071 11.0409 1.58579 10.6658C1.96086 10.2907 2.46957 10.08 3 10.08H3.09C3.42099 10.0723 3.742 9.96512 4.0113 9.77251C4.28059 9.5799 4.48572 9.31074 4.6 9C4.73312 8.69838 4.77282 8.36381 4.714 8.03941C4.65519 7.71502 4.50054 7.41568 4.27 7.18L4.21 7.12C4.02405 6.93425 3.87653 6.71368 3.77588 6.47088C3.67523 6.22808 3.62343 5.96783 3.62343 5.705C3.62343 5.44217 3.67523 5.18192 3.77588 4.93912C3.87653 4.69632 4.02405 4.47575 4.21 4.29C4.39575 4.10405 4.61632 3.95653 4.85912 3.85588C5.10192 3.75523 5.36217 3.70343 5.625 3.70343C5.88783 3.70343 6.14808 3.75523 6.39088 3.85588C6.63368 3.95653 6.85425 4.10405 7.04 4.29L7.1 4.35C7.33568 4.58054 7.63502 4.73519 7.95941 4.794C8.28381 4.85282 8.61838 4.81312 8.92 4.68H9C9.29577 4.55324 9.54802 4.34276 9.72569 4.07447C9.90337 3.80618 9.99872 3.49179 10 3.17V3C10 2.46957 10.2107 1.96086 10.5858 1.58579C10.9609 1.21071 11.4696 1 12 1C12.5304 1 13.0391 1.21071 13.4142 1.58579C13.7893 1.96086 14 2.46957 14 3V3.09C14.0013 3.41179 14.0966 3.72618 14.2743 3.99447C14.452 4.26276 14.7042 4.47324 15 4.6C15.3016 4.73312 15.6362 4.77282 15.9606 4.714C16.285 4.65519 16.5843 4.50054 16.82 4.27L16.88 4.21C17.0657 4.02405 17.2863 3.87653 17.5291 3.77588C17.7719 3.67523 18.0322 3.62343 18.295 3.62343C18.5578 3.62343 18.8181 3.67523 19.0609 3.77588C19.3037 3.87653 19.5243 4.02405 19.71 4.21C19.896 4.39575 20.0435 4.61632 20.1441 4.85912C20.2448 5.10192 20.2966 5.36217 20.2966 5.625C20.2966 5.88783 20.2448 6.14808 20.1441 6.39088C20.0435 6.63368 19.896 6.85425 19.71 7.04L19.65 7.1C19.4195 7.33568 19.2648 7.63502 19.206 7.95941C19.1472 8.28381 19.1869 8.61838 19.32 8.92V9C19.4468 9.29577 19.6572 9.54802 19.9255 9.72569C20.1938 9.90337 20.5082 9.99872 20.83 10H21C21.5304 10 22.0391 10.2107 22.4142 10.5858C22.7893 10.9609 23 11.4696 23 12C23 12.5304 22.7893 13.0391 22.4142 13.4142C22.0391 13.7893 21.5304 14 21 14H20.91C20.5882 14.0013 20.2738 14.0966 20.0055 14.2743C19.7372 14.452 19.5268 14.7042 19.4 15V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                设置
+              </a>
+              <div class="dropdown-divider"></div>
+              <a href="#" @click="logout" class="dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                退出登录
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主体内容区 -->
+    <main class="dashboard-main">
+      <!-- 左侧图表组 -->
+      <div class="left-charts">
+        <!-- 商圈热度排行 -->
+        <div class="chart-container modern-card slide-in-up">
+          <div class="chart-title">商圈热度排行TOP10</div>
+          <div ref="hotRankingChart" class="chart-content"></div>
+        </div>
+        
+        <!-- 时段客流分析 -->
+        <div class="chart-container modern-card slide-in-up">
+          <div class="chart-title">24小时客流量分布</div>
+          <div ref="hourlyFlowChart" class="chart-content"></div>
+        </div>
+      </div>
+
+      <!-- 中央地图选择器 -->
+      <div class="center-map">
+        <AmapMap
+          v-model="mapCenter"
+          :height="'100%'"
+          :business-areas="businessAreas"
+          :current-city="selectedCity"
+          @area-selected="handleAreaSelected"
+          @location-changed="handleLocationChanged"
+          @city-changed="handleCityChange"
+          @area-data-updated="handleAreaDataUpdated"
+        />
+      </div>
+
+      <!-- 右侧图表组 -->
+      <div class="right-charts">
+        <!-- 消费类型分布 -->
+        <div class="chart-container modern-card slide-in-up">
+          <div class="chart-title">消费类型分布</div>
+          <div ref="categoryChart" class="chart-content"></div>
+        </div>
+        
+        <!-- 评价情感分析 -->
+        <div class="chart-container modern-card slide-in-up">
+          <div class="chart-title">用户评价情感分析</div>
+          <div ref="sentimentChart" class="chart-content"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 底部图表区 -->
+    <footer class="dashboard-footer">
+      <!-- 消费趋势曲线 -->
+      <div class="bottom-chart modern-card slide-in-up">
+        <div class="chart-title">近30天消费趋势</div>
+        <div ref="trendChart" class="chart-content"></div>
+      </div>
+      
+      <!-- 商圈对比雷达图 -->
+      <div class="bottom-chart modern-card slide-in-up">
+        <div class="chart-title">商圈综合评价对比</div>
+        <div ref="radarChart" class="chart-content"></div>
+      </div>
+    </footer>
+
+    <!-- 登录模态框 -->
+    <div v-if="showLogin" class="modern-modal" @click.self="showLogin = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>登录</h3>
+          <button @click="showLogin = false" class="close-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <form @submit.prevent="handleLogin" class="auth-form">
+          <div class="form-group">
+            <label class="form-label">邮箱或手机号</label>
+            <input 
+              v-model="loginForm.username" 
+              type="text" 
+              class="modern-input" 
+              placeholder="请输入邮箱或手机号"
+              required
+            />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">密码</label>
+            <input 
+              v-model="loginForm.password" 
+              type="password" 
+              class="modern-input" 
+              placeholder="请输入密码"
+              required
+            />
+          </div>
+          
+          <div class="form-options">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="loginForm.remember" />
+              <span class="checkmark"></span>
+              记住我
+            </label>
+            <a href="#" class="forgot-link">忘记密码？</a>
+          </div>
+          
+          <button type="submit" class="modern-btn primary full-width" :disabled="loginLoading">
+            <span v-if="loginLoading" class="modern-loading"></span>
+            {{ loginLoading ? '登录中...' : '登录' }}
+          </button>
+          
+          <div class="auth-divider">
+            <span>或</span>
+          </div>
+          
+          <div class="social-login">
+            <button type="button" class="social-btn wechat">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 4.882-1.692 7.167-.753-.318-2.872-3.17-5.897-8.010-5.897z"/>
+              </svg>
+              微信登录
+            </button>
+            <button type="button" class="social-btn qq">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.619 5.367 11.986 11.988 11.986s11.987-5.367 11.987-11.986C24.004 5.367 18.637.001 12.017.001z"/>
+              </svg>
+              QQ登录
+            </button>
+          </div>
+          
+          <div class="auth-footer">
+            还没有账号？ <a href="#" @click="switchToRegister">立即注册</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 注册模态框 -->
+    <div v-if="showRegister" class="modern-modal" @click.self="showRegister = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>注册</h3>
+          <button @click="showRegister = false" class="close-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <form @submit.prevent="handleRegister" class="auth-form">
+          <div class="form-group">
+            <label class="form-label">用户名</label>
+            <input 
+              v-model="registerForm.username" 
+              type="text" 
+              class="modern-input" 
+              placeholder="请输入用户名"
+              required
+            />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">邮箱</label>
+            <input 
+              v-model="registerForm.email" 
+              type="email" 
+              class="modern-input" 
+              placeholder="请输入邮箱地址"
+              required
+            />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">手机号</label>
+            <input 
+              v-model="registerForm.phone" 
+              type="tel" 
+              class="modern-input" 
+              placeholder="请输入手机号"
+              required
+            />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">密码</label>
+            <input 
+              v-model="registerForm.password" 
+              type="password" 
+              class="modern-input" 
+              placeholder="请输入密码（至少6位）"
+              required
+              minlength="6"
+            />
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">确认密码</label>
+            <input 
+              v-model="registerForm.confirmPassword" 
+              type="password" 
+              class="modern-input" 
+              placeholder="请再次输入密码"
+              required
+            />
+          </div>
+          
+          <div class="form-options">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="registerForm.agreeTerms" required />
+              <span class="checkmark"></span>
+              我已阅读并同意 <a href="#" class="terms-link">用户协议</a> 和 <a href="#" class="terms-link">隐私政策</a>
+            </label>
+          </div>
+          
+          <button type="submit" class="modern-btn primary full-width" :disabled="registerLoading">
+            <span v-if="registerLoading" class="modern-loading"></span>
+            {{ registerLoading ? '注册中...' : '注册' }}
+          </button>
+          
+          <div class="auth-footer">
+            已有账号？ <a href="#" @click="switchToLogin">立即登录</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 通知组件 -->
+    <div v-if="notification.show" :class="['modern-notification', 'notification', notification.type]">
+      {{ notification.message }}
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, nextTick, watch } from 'vue'
+import * as echarts from 'echarts'
+import CitySelector from './CitySelector.vue'
+
+import { analyticsApi } from '../api/analytics'
+import { authApi } from '../api/auth'
+import { businessApi } from '../api/business'
+import BaiduMap from './BaiduMap.vue'
+import AmapMap from './AmapMap.vue'
+
+// 响应式数据
+const updateTime = ref(new Date().toLocaleString())
+const searchKeyword = ref('')
+const searchRadius = ref('1000')
+
+// 地图相关数据
+const mapCenter = ref({ lng: 116.4074, lat: 39.9042 }) // 北京中心
+const businessAreas = ref([])
+const selectedArea = ref(null)
+
+// 城市相关
+const selectedCity = ref({
+  id: 'beijing',
+  name: '北京',
+  code: '110000',
+  longitude: 116.4074,
+  latitude: 39.9042
+})
+
+// 数据状态
+const dataStatus = ref({
+  online: true,
+  text: '在线',
+  lastUpdate: new Date()
+})
+
+// 数据加载状态
+const dataLoading = ref({
+  hotRanking: false,
+  hourlyFlow: false,
+  category: false,
+  sentiment: false,
+  trend: false,
+  radar: false,
+  heatmap: false
+})
+
+// 用户认证相关
+const isLoggedIn = ref(false)
+const showLogin = ref(false)
+const showRegister = ref(false)
+const showUserMenu = ref(false)
+const loginLoading = ref(false)
+const registerLoading = ref(false)
+
+// 用户信息
+const userInfo = ref({
+  name: '',
+  email: '',
+  avatar: ''
+})
+
+// 登录表单
+const loginForm = ref({
+  username: '',
+  password: '',
+  remember: false
+})
+
+// 注册表单
+const registerForm = ref({
+  username: '',
+  email: '',
+  phone: '',
+  password: '',
+  confirmPassword: '',
+  agreeTerms: false
+})
+
+// 通知系统
+const notification = ref({
+  show: false,
+  type: 'info', // success, error, info, warning
+  message: ''
+})
+
+// 图表引用
+const hotRankingChart = ref(null)
+const hourlyFlowChart = ref(null)
+// const mainMap = ref(null) // 已移除，使用BaiduMap组件替代
+const categoryChart = ref(null)
+const sentimentChart = ref(null)
+const trendChart = ref(null)
+const radarChart = ref(null)
+
+// 图表实例
+let charts = {}
+
+// 模拟数据
+const mockData = {
+  // 商圈热度排行数据
+  hotRanking: [
+    { name: '三里屯', value: 9500, growth: 15.2 },
+    { name: '王府井', value: 8800, growth: 8.7 },
+    { name: '西单', value: 8200, growth: 12.1 },
+    { name: '朝阳大悦城', value: 7600, growth: -2.3 },
+    { name: '国贸', value: 7200, growth: 5.8 },
+    { name: '五道口', value: 6800, growth: 18.9 },
+    { name: '中关村', value: 6500, growth: 7.4 },
+    { name: '蓝色港湾', value: 6100, growth: 3.2 },
+    { name: '世贸天阶', value: 5900, growth: -1.1 },
+    { name: '颐堤港', value: 5600, growth: 9.6 }
+  ],
+  
+  // 24小时客流数据
+  hourlyFlow: {
+    hours: Array.from({length: 24}, (_, i) => i + ':00'),
+    weekday: [120, 80, 60, 45, 35, 50, 180, 320, 280, 350, 420, 580, 750, 680, 520, 480, 620, 890, 1200, 980, 750, 520, 380, 220],
+    weekend: [200, 120, 80, 60, 45, 60, 150, 280, 380, 520, 680, 850, 1100, 1350, 1200, 980, 850, 1180, 1450, 1280, 950, 680, 450, 320]
+  },
+  
+  // 消费类型分布
+  categoryData: [
+    { name: '餐饮美食', value: 3500, color: '#ff6b6b' },
+    { name: '购物零售', value: 2800, color: '#4ecdc4' },
+    { name: '休闲娱乐', value: 1900, color: '#45b7d1' },
+    { name: '生活服务', value: 1200, color: '#96ceb4' },
+    { name: '酒店住宿', value: 800, color: '#ffeaa7' },
+    { name: '其他', value: 600, color: '#dda0dd' }
+  ],
+  
+  // 情感分析数据
+  sentimentData: {
+    positive: 68.5,
+    neutral: 22.3,
+    negative: 9.2
+  },
+  
+  // 消费趋势数据
+  trendData: {
+    dates: ['09-01', '09-03', '09-05', '09-07', '09-09', '09-11', '09-13', '09-15', '09-17', '09-19', '09-21'],
+    sales: [12500, 13200, 11800, 14500, 15200, 13800, 16500, 17200, 15800, 16800, 18200],
+    customers: [2800, 2950, 2650, 3200, 3400, 3100, 3650, 3800, 3500, 3700, 4000]
+  },
+  
+  // 雷达图数据
+  radarData: {
+    indicators: [
+      { name: '客流量', max: 100 },
+      { name: '消费水平', max: 100 },
+      { name: '用户评价', max: 100 },
+      { name: '交通便利', max: 100 },
+      { name: '配套设施', max: 100 },
+      { name: '品牌丰富度', max: 100 }
+    ],
+    data: [
+      { name: '三里屯', value: [95, 88, 92, 85, 90, 95] },
+      { name: '王府井', value: [85, 95, 88, 92, 85, 88] },
+      { name: '西单', value: [88, 82, 85, 88, 82, 85] }
+    ]
+  }
+}
+
+// 初始化商圈热度排行图
+const initHotRankingChart = () => {
+  const chart = echarts.init(hotRankingChart.value)
+  
+  const option = {
+    backgroundColor: 'transparent',
+    grid: {
+      top: 20,
+      left: 10,
+      right: 60,
+      bottom: 20,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#8c9eff' },
+      splitLine: { 
+        show: true,
+        lineStyle: { color: '#2a3f5f', type: 'dashed' }
+      }
+    },
+    yAxis: {
+      type: 'category',
+      data: mockData.hotRanking.map(item => item.name).reverse(),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: { color: '#8c9eff' }
+    },
+    series: [{
+      type: 'bar',
+      data: mockData.hotRanking.map(item => item.value).reverse(),
+      barWidth: 20,
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+          { offset: 0, color: '#667eea' },
+          { offset: 1, color: '#764ba2' }
+        ]),
+        borderRadius: [0, 10, 10, 0]
+      },
+      label: {
+        show: true,
+        position: 'right',
+        color: '#fff',
+        fontSize: 12
+      }
+    }]
+  }
+  
+  chart.setOption(option)
+  charts.hotRanking = chart
+}
+
+// 初始化24小时客流图
+const initHourlyFlowChart = () => {
+  const chart = echarts.init(hourlyFlowChart.value)
+  
+  const option = {
+    backgroundColor: 'transparent',
+    legend: {
+      data: ['工作日', '周末'],
+      textStyle: { color: '#8c9eff' },
+      top: 10
+    },
+    grid: {
+      top: 50,
+      left: 20,
+      right: 20,
+      bottom: 30,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: mockData.hourlyFlow.hours,
+      axisLabel: { 
+        color: '#8c9eff',
+        interval: 3
+      },
+      axisLine: { lineStyle: { color: '#2a3f5f' } }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { color: '#8c9eff' },
+      axisLine: { lineStyle: { color: '#2a3f5f' } },
+      splitLine: { 
+        lineStyle: { color: '#2a3f5f', type: 'dashed' }
+      }
+    },
+    series: [
+      {
+        name: '工作日',
+        type: 'line',
+        data: mockData.hourlyFlow.weekday,
+        smooth: true,
+        lineStyle: { color: '#4fc3f7', width: 3 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
+            { offset: 1, color: 'rgba(79, 195, 247, 0.05)' }
+          ])
+        }
+      },
+      {
+        name: '周末',
+        type: 'line',
+        data: mockData.hourlyFlow.weekend,
+        smooth: true,
+        lineStyle: { color: '#ff7043', width: 3 },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(255, 112, 67, 0.3)' },
+            { offset: 1, color: 'rgba(255, 112, 67, 0.05)' }
+          ])
+        }
+      }
+    ]
+  }
+  
+  chart.setOption(option)
+  charts.hourlyFlow = chart
+}
+
+// 初始化消费类型分布图
+const initCategoryChart = () => {
+  const chart = echarts.init(categoryChart.value)
+  
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      formatter: '{a} <br/>{b}: {c} ({d}%)'
+    },
+    legend: {
+      orient: 'vertical',
+      right: 10,
+      top: 'center',
+      textStyle: { color: '#8c9eff', fontSize: 12 }
+    },
+    series: [{
+      name: '消费类型',
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['40%', '50%'],
+      avoidLabelOverlap: false,
+      itemStyle: {
+        borderRadius: 8,
+        borderColor: '#1a2b4a',
+        borderWidth: 2
+      },
+      label: {
+        show: false
+      },
+      emphasis: {
+        label: {
+          show: true,
+          fontSize: '14',
+          fontWeight: 'bold',
+          color: '#fff'
+        }
+      },
+      labelLine: {
+        show: false
+      },
+      data: mockData.categoryData.map(item => ({
+        name: item.name,
+        value: item.value,
+        itemStyle: { color: item.color }
+      }))
+    }]
+  }
+  
+  chart.setOption(option)
+  charts.category = chart
+}
+
+// 初始化情感分析图
+const initSentimentChart = () => {
+  const chart = echarts.init(sentimentChart.value)
+  
+  const option = {
+    backgroundColor: 'transparent',
+    grid: {
+      top: 30,
+      left: 20,
+      right: 20,
+      bottom: 30,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: ['正面评价', '中性评价', '负面评价'],
+      axisLabel: { color: '#8c9eff' },
+      axisLine: { lineStyle: { color: '#2a3f5f' } }
+    },
+    yAxis: {
+      type: 'value',
+      max: 100,
+      axisLabel: { 
+        color: '#8c9eff',
+        formatter: '{value}%'
+      },
+      axisLine: { lineStyle: { color: '#2a3f5f' } },
+      splitLine: { 
+        lineStyle: { color: '#2a3f5f', type: 'dashed' }
+      }
+    },
+    series: [{
+      type: 'bar',
+      data: [
+        { 
+          value: mockData.sentimentData.positive, 
+          itemStyle: { 
+            color: new echarts.graphic.LinearGradient(0, 1, 0, 0, [
+              { offset: 0, color: '#4caf50' },
+              { offset: 1, color: '#81c784' }
+            ])
+          }
+        },
+        { 
+          value: mockData.sentimentData.neutral, 
+          itemStyle: { 
+            color: new echarts.graphic.LinearGradient(0, 1, 0, 0, [
+              { offset: 0, color: '#ff9800' },
+              { offset: 1, color: '#ffb74d' }
+            ])
+          }
+        },
+        { 
+          value: mockData.sentimentData.negative, 
+          itemStyle: { 
+            color: new echarts.graphic.LinearGradient(0, 1, 0, 0, [
+              { offset: 0, color: '#f44336' },
+              { offset: 1, color: '#e57373' }
+            ])
+          }
+        }
+      ],
+      barWidth: 40,
+      itemStyle: {
+        borderRadius: [8, 8, 0, 0]
+      },
+      label: {
+        show: true,
+        position: 'top',
+        color: '#fff',
+        formatter: '{c}%'
+      }
+    }]
+  }
+  
+  chart.setOption(option)
+  charts.sentiment = chart
+}
+
+// 初始化消费趋势图
+const initTrendChart = () => {
+  const chart = echarts.init(trendChart.value)
+  
+  const option = {
+    backgroundColor: 'transparent',
+    legend: {
+      data: ['销售额(万元)', '客流量(千人)'],
+      textStyle: { color: '#8c9eff' },
+      top: 10
+    },
+    grid: {
+      top: 50,
+      left: 20,
+      right: 20,
+      bottom: 30,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: mockData.trendData.dates,
+      axisLabel: { color: '#8c9eff' },
+      axisLine: { lineStyle: { color: '#2a3f5f' } }
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '销售额',
+        nameTextStyle: { color: '#8c9eff' },
+        axisLabel: { 
+          color: '#8c9eff',
+          formatter: '{value}万'
+        },
+        axisLine: { lineStyle: { color: '#2a3f5f' } },
+        splitLine: { 
+          lineStyle: { color: '#2a3f5f', type: 'dashed' }
+        }
+      },
+      {
+        type: 'value',
+        name: '客流量',
+        nameTextStyle: { color: '#8c9eff' },
+        axisLabel: { 
+          color: '#8c9eff',
+          formatter: '{value}千'
+        },
+        axisLine: { lineStyle: { color: '#2a3f5f' } }
+      }
+    ],
+    series: [
+      {
+        name: '销售额(万元)',
+        type: 'line',
+        data: mockData.trendData.sales.map(v => v / 100),
+        smooth: true,
+        lineStyle: { color: '#00bcd4', width: 3 },
+        itemStyle: { color: '#00bcd4' }
+      },
+      {
+        name: '客流量(千人)',
+        type: 'line',
+        yAxisIndex: 1,
+        data: mockData.trendData.customers.map(v => v / 100),
+        smooth: true,
+        lineStyle: { color: '#ff5722', width: 3 },
+        itemStyle: { color: '#ff5722' }
+      }
+    ]
+  }
+  
+  chart.setOption(option)
+  charts.trend = chart
+}
+
+// 初始化雷达图
+const initRadarChart = () => {
+  const chart = echarts.init(radarChart.value)
+  
+  const option = {
+    backgroundColor: 'transparent',
+    legend: {
+      data: mockData.radarData.data.map(item => item.name),
+      textStyle: { color: '#8c9eff' },
+      bottom: 10
+    },
+    radar: {
+      indicator: mockData.radarData.indicators,
+      nameGap: 8,
+      name: {
+        textStyle: {
+          color: '#8c9eff',
+          fontSize: 12
+        }
+      },
+      splitArea: {
+        areaStyle: {
+          color: ['rgba(114, 172, 209, 0.1)', 'rgba(114, 172, 209, 0.05)']
+        }
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#2a3f5f'
+        }
+      },
+      axisLine: {
+        lineStyle: {
+          color: '#2a3f5f'
+        }
+      }
+    },
+    series: [{
+      type: 'radar',
+      data: mockData.radarData.data.map((item, index) => ({
+        value: item.value,
+        name: item.name,
+        itemStyle: {
+          color: ['#667eea', '#764ba2', '#f093fb'][index]
+        },
+        areaStyle: {
+          opacity: 0.3
+        }
+      }))
+    }]
+  }
+  
+  chart.setOption(option)
+  charts.radar = chart
+}
+
+// 初始化地图 - 已移除，使用BaiduMap组件替代
+const initMainMap = () => {
+  console.log('initMainMap已禁用，使用BaiduMap组件替代')
+  return
+  // const chart = echarts.init(mainMap.value)
+  
+  // 模拟北京商圈坐标数据
+  const beijingBusinessAreas = [
+    { name: '三里屯', coord: [116.4551, 39.9364], value: 9500 },
+    { name: '王府井', coord: [116.4074, 39.9170], value: 8800 },
+    { name: '西单', coord: [116.3770, 39.9065], value: 8200 },
+    { name: '朝阳大悦城', coord: [116.4836, 39.9219], value: 7600 },
+    { name: '国贸', coord: [116.4619, 39.9078], value: 7200 },
+    { name: '五道口', coord: [116.3388, 39.9926], value: 6800 },
+    { name: '中关村', coord: [116.3158, 39.9853], value: 6500 },
+    { name: '蓝色港湾', coord: [116.4889, 39.9561], value: 6100 },
+    { name: '世贸天阶', coord: [116.4606, 39.9181], value: 5900 },
+    { name: '颐堤港', coord: [116.4889, 39.9561], value: 5600 }
+  ]
+  
+  const option = {
+    backgroundColor: 'transparent',
+    title: {
+      text: '商圈热力分布图',
+      left: 'center',
+      top: 20,
+      textStyle: {
+        color: '#8c9eff',
+        fontSize: 16,
+        fontWeight: 'bold'
+      }
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: function(params) {
+        return `${params.name}<br/>经度: ${params.value[0].toFixed(4)}°<br/>纬度: ${params.value[1].toFixed(4)}°<br/>热度值: ${params.value[2]}`
+      },
+      backgroundColor: 'rgba(26, 43, 74, 0.9)',
+      borderColor: '#8c9eff',
+      textStyle: {
+        color: '#fff'
+      }
+    },
+    grid: {
+      left: 60,
+      right: 60,
+      top: 80,
+      bottom: 100,
+      containLabel: false
+    },
+    xAxis: {
+      type: 'value',
+      scale: true,
+      axisLabel: { 
+        color: '#8c9eff',
+        formatter: function(value) {
+          return value.toFixed(2) + '°'
+        }
+      },
+      splitLine: { 
+        show: true,
+        lineStyle: {
+          color: 'rgba(140, 158, 255, 0.1)'
+        }
+      },
+      axisLine: { lineStyle: { color: '#2a3f5f' } },
+      name: '经度',
+      nameTextStyle: { color: '#8c9eff' }
+    },
+    yAxis: {
+      type: 'value',
+      scale: true,
+      axisLabel: { 
+        color: '#8c9eff',
+        formatter: function(value) {
+          return value.toFixed(2) + '°'
+        }
+      },
+      splitLine: { 
+        show: true,
+        lineStyle: {
+          color: 'rgba(140, 158, 255, 0.1)'
+        }
+      },
+      axisLine: { lineStyle: { color: '#2a3f5f' } },
+      name: '纬度',
+      nameTextStyle: { color: '#8c9eff' }
+    },
+    visualMap: {
+      min: 5000,
+      max: 10000,
+      calculable: true,
+      orient: 'horizontal',
+      left: 'center',
+      bottom: 20,
+      inRange: {
+        color: ['#4fc3f7', '#29b6f6', '#03a9f4', '#0288d1', '#0277bd', '#01579b']
+      },
+      textStyle: {
+        color: '#8c9eff'
+      },
+      text: ['高', '低'],
+      itemWidth: 20,
+      itemHeight: 140
+    },
+    series: [
+      {
+        type: 'scatter',
+        data: beijingBusinessAreas.map(item => [item.coord[0], item.coord[1], item.value, item.name]),
+        symbolSize: function(data) {
+          return Math.sqrt(data[2] / 100) + 5
+        },
+        itemStyle: {
+          shadowBlur: 10,
+          shadowColor: 'rgba(25, 100, 150, 0.5)',
+          shadowOffsetY: 5
+        },
+        emphasis: {
+          itemStyle: {
+            borderColor: '#fff',
+            borderWidth: 2
+          }
+        }
+      }
+    ]
+  }
+  
+  chart.setOption(option)
+  charts.mainMap = chart
+}
+
+// 处理搜索
+const handleSearch = () => {
+  console.log('搜索关键词:', searchKeyword.value)
+  console.log('搜索半径:', searchRadius.value)
+  // 这里可以调用实际的搜索API
+  updateMapData()
+}
+
+// 更新地图数据
+const updateMapData = () => {
+  console.log('更新地图数据，半径:', searchRadius.value)
+  // 根据搜索半径更新地图显示的数据
+}
+
+// 显示通知
+const showNotification = (message, type = 'info') => {
+  notification.value = {
+    show: true,
+    type,
+    message
+  }
+  
+  setTimeout(() => {
+    notification.value.show = false
+  }, 3000)
+}
+
+// 城市变化处理
+const handleCityChange = (city) => {
+  selectedCity.value = city
+  
+  // 更新地图中心点到新城市
+  updateMapCenter(city)
+  
+  // 加载新城市的数据
+  loadAllData()
+  loadBusinessAreas()
+}
+
+// 更新地图中心点
+const updateMapCenter = (city) => {
+  const cityCoords = {
+    'beijing': { lng: 116.4074, lat: 39.9042 },
+    'shanghai': { lng: 121.4737, lat: 31.2304 },
+    'guangzhou': { lng: 113.2644, lat: 23.1291 },
+    'shenzhen': { lng: 114.0579, lat: 22.5431 },
+    'hangzhou': { lng: 120.1614, lat: 30.2936 },
+    'nanjing': { lng: 118.7969, lat: 32.0603 },
+    'wuhan': { lng: 114.2734, lat: 30.5801 },
+    'chengdu': { lng: 104.0668, lat: 30.5728 }
+  }
+  
+  mapCenter.value = cityCoords[city.id] || cityCoords['beijing']
+}
+
+// 地图区域选择处理
+const handleAreaSelected = (area) => {
+  selectedArea.value = area
+  console.log('选中商圈:', area)
+  
+  // 更新图表数据
+  updateChartsForArea(area)
+}
+
+// 地图位置变化处理
+const handleLocationChanged = (location) => {
+  console.log('地图位置变化:', location)
+  
+  // 可以根据新位置搜索附近的商圈
+  searchNearbyBusinessAreas(location)
+}
+
+// 更新选定区域的图表数据
+const updateChartsForArea = async (area) => {
+  if (!area) return
+  
+  try {
+    // 加载特定商圈的详细数据
+    await Promise.all([
+      loadAreaHotRankingData(area.id),
+      loadAreaHourlyFlowData(area.id),
+      loadAreaCategoryData(area.id),
+      loadAreaSentimentData(area.id),
+      loadAreaTrendData(area.id),
+      loadAreaRadarData(area.id)
+    ])
+    
+    updateTime.value = new Date().toLocaleString()
+    showNotification(`已切换到 ${area.name} 的数据`, 'success')
+  } catch (error) {
+    console.error('加载商圈数据失败:', error)
+    showNotification('加载商圈数据失败', 'error')
+  }
+}
+
+// 处理商圈数据更新事件
+const handleAreaDataUpdated = async (eventData) => {
+  const { area, detailed_data, source } = eventData
+  
+  console.log('商圈数据已更新:', area.name, '数据源:', source)
+  
+  try {
+    // 更新当前选中的商圈
+    selectedArea.value = area
+    
+    // 如果有详细的店铺统计数据，更新图表
+    if (detailed_data.store_statistics) {
+      updateChartsWithDetailedData(area, detailed_data.store_statistics)
+    }
+    
+    // 如果有评价样本，可以用于情感分析
+    if (detailed_data.reviews_sample && detailed_data.reviews_sample.length > 0) {
+      updateSentimentWithReviews(detailed_data.reviews_sample)
+    }
+    
+    // 更新时间戳
+    updateTime.value = new Date().toLocaleString()
+    
+    // 显示通知
+    const message = detailed_data.cached ? 
+      `已从缓存更新 ${area.name} 的图表数据` :
+      `已使用最新爬取数据更新 ${area.name} 的图表`
+    
+    showNotification(message, 'success')
+    
+  } catch (error) {
+    console.error('更新图表数据失败:', error)
+    showNotification('更新图表数据失败', 'error')
+  }
+}
+
+// 使用详细数据更新图表
+const updateChartsWithDetailedData = (area, storeStats) => {
+  // 更新消费类型分布图
+  if (storeStats.by_category && Object.keys(storeStats.by_category).length > 0) {
+    const categoryData = Object.entries(storeStats.by_category).map(([category, count], index) => ({
+      name: getCategoryDisplayName(category),
+      value: count,
+      color: mockData.categoryData[index]?.color || `hsl(${index * 60}, 70%, 60%)`
+    }))
+    
+    mockData.categoryData = categoryData
+    if (charts.category) {
+      initCategoryChart()
+    }
+  }
+  
+  // 更新情感分析图（基于平均评分）
+  if (storeStats.avg_rating > 0) {
+    const rating = storeStats.avg_rating
+    const positive = Math.min(100, rating * 20) // 5分制转百分制
+    const negative = Math.max(0, (2 - rating) * 10) // 低于2分的为负面
+    const neutral = 100 - positive - negative
+    
+    mockData.sentimentData = {
+      positive: Math.max(0, positive),
+      neutral: Math.max(0, neutral),
+      negative: Math.max(0, negative)
+    }
+    
+    if (charts.sentiment) {
+      initSentimentChart()
+    }
+  }
+  
+  // 更新热度排行（将当前商圈添加到排行中）
+  const existingIndex = mockData.hotRanking.findIndex(item => item.name === area.name)
+  const areaRankingData = {
+    name: area.name,
+    value: area.hot_value || area.hotValue || 50,
+    growth: Math.random() * 20 - 5 // 模拟增长率
+  }
+  
+  if (existingIndex >= 0) {
+    mockData.hotRanking[existingIndex] = areaRankingData
+  } else {
+    mockData.hotRanking.unshift(areaRankingData)
+    mockData.hotRanking = mockData.hotRanking.slice(0, 10) // 保持前10名
+  }
+  
+  if (charts.hotRanking) {
+    initHotRankingChart()
+  }
+}
+
+// 获取类别显示名称
+const getCategoryDisplayName = (category) => {
+  const categoryMap = {
+    'restaurant': '餐饮美食',
+    'retail': '购物零售',
+    'entertainment': '休闲娱乐',
+    'service': '生活服务'
+  }
+  return categoryMap[category] || category
+}
+
+// 基于评价更新情感分析
+const updateSentimentWithReviews = (reviews) => {
+  if (!reviews || reviews.length === 0) return
+  
+  let positive = 0, neutral = 0, negative = 0
+  
+  reviews.forEach(review => {
+    if (review.rating >= 4) {
+      positive++
+    } else if (review.rating >= 3) {
+      neutral++
+    } else {
+      negative++
+    }
+  })
+  
+  const total = reviews.length
+  mockData.sentimentData = {
+    positive: Math.round((positive / total) * 100),
+    neutral: Math.round((neutral / total) * 100),
+    negative: Math.round((negative / total) * 100)
+  }
+  
+  if (charts.sentiment) {
+    initSentimentChart()
+  }
+}
+
+// 搜索附近商圈
+const searchNearbyBusinessAreas = async (location) => {
+  try {
+    const nearbyAreas = await businessApi.searchNearbyBusinessAreas({
+      longitude: location.lng,
+      latitude: location.lat,
+      radius: searchRadius.value || 1000
+    })
+    
+    if (nearbyAreas && nearbyAreas.length > 0) {
+      businessAreas.value = nearbyAreas
+    }
+  } catch (error) {
+    console.error('搜索附近商圈失败:', error)
+  }
+}
+
+// 加载商圈数据
+const loadBusinessAreas = async () => {
+  if (!selectedCity.value.id) return
+  
+  try {
+    const areas = await businessApi.getBusinessAreaList(selectedCity.value.id)
+    if (areas && areas.length > 0) {
+      businessAreas.value = areas.map(area => ({
+        id: area.id,
+        name: area.name,
+        longitude: area.longitude,
+        latitude: area.latitude,
+        hotValue: area.hotValue,
+        storeCount: area.storeCount,
+        avgConsumption: area.avgConsumption,
+        category: area.category
+      }))
+    }
+  } catch (error) {
+    console.error('加载商圈数据失败:', error)
+  }
+}
+
+// 加载特定商圈的热度排行数据
+const loadAreaHotRankingData = async (areaId) => {
+  try {
+    const data = await analyticsApi.getAreaHotRankingData(areaId)
+    if (data && data.length > 0) {
+      // 更新热度排行图表
+      updateHotRankingChart(data)
+    }
+  } catch (error) {
+    console.error('加载商圈热度数据失败:', error)
+  }
+}
+
+// 加载特定商圈的客流数据
+const loadAreaHourlyFlowData = async (areaId) => {
+  try {
+    const data = await analyticsApi.getAreaHourlyFlowData(areaId)
+    if (data) {
+      // 更新客流图表
+      updateHourlyFlowChart(data)
+    }
+  } catch (error) {
+    console.error('加载商圈客流数据失败:', error)
+  }
+}
+
+// 加载特定商圈的类型分布数据
+const loadAreaCategoryData = async (areaId) => {
+  try {
+    const data = await analyticsApi.getAreaCategoryDistribution(areaId)
+    if (data && data.length > 0) {
+      // 更新类型分布图表
+      updateCategoryChart(data)
+    }
+  } catch (error) {
+    console.error('加载商圈类型数据失败:', error)
+  }
+}
+
+// 加载特定商圈的情感分析数据
+const loadAreaSentimentData = async (areaId) => {
+  try {
+    const data = await analyticsApi.getAreaSentimentAnalysis(areaId)
+    if (data) {
+      // 更新情感分析图表
+      updateSentimentChart(data)
+    }
+  } catch (error) {
+    console.error('加载商圈情感数据失败:', error)
+  }
+}
+
+// 加载特定商圈的趋势数据
+const loadAreaTrendData = async (areaId) => {
+  try {
+    const data = await analyticsApi.getAreaConsumptionTrend(areaId)
+    if (data) {
+      // 更新趋势图表
+      updateTrendChart(data)
+    }
+  } catch (error) {
+    console.error('加载商圈趋势数据失败:', error)
+  }
+}
+
+// 加载特定商圈的雷达对比数据
+const loadAreaRadarData = async (areaId) => {
+  try {
+    const data = await analyticsApi.getAreaRadarComparisonData([areaId])
+    if (data) {
+      // 更新雷达图表
+      updateRadarChart(data)
+    }
+  } catch (error) {
+    console.error('加载商圈雷达数据失败:', error)
+  }
+}
+
+// 加载所有数据
+const loadAllData = async () => {
+  if (!selectedCity.value.id) return
+  
+  try {
+    dataStatus.value = { online: true, text: '加载中...', lastUpdate: new Date() }
+    
+    // 并行加载所有数据
+    await Promise.all([
+      loadHotRankingData(),
+      loadHourlyFlowData(),
+      loadCategoryData(),
+      loadSentimentData(),
+      loadTrendData(),
+      loadRadarData(),
+      loadHeatmapData()
+    ])
+    
+    dataStatus.value = { online: true, text: '在线', lastUpdate: new Date() }
+    updateTime.value = new Date().toLocaleString()
+  } catch (error) {
+    console.error('加载数据失败:', error)
+    dataStatus.value = { online: false, text: '离线', lastUpdate: new Date() }
+    showNotification('数据加载失败，请稍后重试', 'error')
+  }
+}
+
+// 加载商圈热度排行数据
+const loadHotRankingData = async () => {
+  if (!selectedCity.value.id) return
+  
+  try {
+    dataLoading.value.hotRanking = true
+    const data = await analyticsApi.getHotRankingData(selectedCity.value.id)
+    
+    if (data && data.length > 0) {
+      // 更新模拟数据为真实数据
+      mockData.hotRanking = data.map(item => ({
+        name: item.name,
+        value: item.hotValue,
+        growth: item.growthRate
+      }))
+      
+      // 重新渲染图表
+      if (charts.hotRanking) {
+        initHotRankingChart()
+      }
+    }
+  } catch (error) {
+    console.error('加载热度排行数据失败:', error)
+    // 使用模拟数据
+  } finally {
+    dataLoading.value.hotRanking = false
+  }
+}
+
+// 加载24小时客流数据
+const loadHourlyFlowData = async () => {
+  if (!selectedCity.value.id) return
+  
+  try {
+    dataLoading.value.hourlyFlow = true
+    const data = await analyticsApi.getHourlyFlowData(selectedCity.value.id)
+    
+    if (data) {
+      mockData.hourlyFlow = {
+        hours: data.hours || mockData.hourlyFlow.hours,
+        weekday: data.weekday || mockData.hourlyFlow.weekday,
+        weekend: data.weekend || mockData.hourlyFlow.weekend
+      }
+      
+      if (charts.hourlyFlow) {
+        initHourlyFlowChart()
+      }
+    }
+  } catch (error) {
+    console.error('加载客流数据失败:', error)
+  } finally {
+    dataLoading.value.hourlyFlow = false
+  }
+}
+
+// 加载消费类型分布数据
+const loadCategoryData = async () => {
+  if (!selectedCity.value.id) return
+  
+  try {
+    dataLoading.value.category = true
+    const data = await analyticsApi.getCategoryDistribution(selectedCity.value.id)
+    
+    if (data && data.length > 0) {
+      mockData.categoryData = data.map((item, index) => ({
+        name: item.name,
+        value: item.value,
+        color: mockData.categoryData[index]?.color || `hsl(${index * 60}, 70%, 60%)`
+      }))
+      
+      if (charts.category) {
+        initCategoryChart()
+      }
+    }
+  } catch (error) {
+    console.error('加载消费类型数据失败:', error)
+  } finally {
+    dataLoading.value.category = false
+  }
+}
+
+// 加载情感分析数据
+const loadSentimentData = async () => {
+  if (!selectedCity.value.id) return
+  
+  try {
+    dataLoading.value.sentiment = true
+    const data = await analyticsApi.getSentimentAnalysis(selectedCity.value.id)
+    
+    if (data) {
+      mockData.sentimentData = {
+        positive: data.positive || mockData.sentimentData.positive,
+        neutral: data.neutral || mockData.sentimentData.neutral,
+        negative: data.negative || mockData.sentimentData.negative
+      }
+      
+      if (charts.sentiment) {
+        initSentimentChart()
+      }
+    }
+  } catch (error) {
+    console.error('加载情感分析数据失败:', error)
+  } finally {
+    dataLoading.value.sentiment = false
+  }
+}
+
+// 加载消费趋势数据
+const loadTrendData = async () => {
+  if (!selectedCity.value.id) return
+  
+  try {
+    dataLoading.value.trend = true
+    const data = await analyticsApi.getConsumptionTrend(selectedCity.value.id)
+    
+    if (data) {
+      mockData.trendData = {
+        dates: data.dates || mockData.trendData.dates,
+        sales: data.sales || mockData.trendData.sales,
+        customers: data.customers || mockData.trendData.customers
+      }
+      
+      if (charts.trend) {
+        initTrendChart()
+      }
+    }
+  } catch (error) {
+    console.error('加载趋势数据失败:', error)
+  } finally {
+    dataLoading.value.trend = false
+  }
+}
+
+// 加载雷达图数据
+const loadRadarData = async () => {
+  if (!selectedCity.value.id) return
+  
+  try {
+    dataLoading.value.radar = true
+    // 获取热门商圈进行对比
+    const hotAreas = mockData.hotRanking.slice(0, 3).map(item => ({ id: item.name, name: item.name }))
+    const areaIds = hotAreas.map(area => area.id)
+    
+    const data = await analyticsApi.getRadarComparisonData(areaIds)
+    
+    if (data) {
+      mockData.radarData = {
+        indicators: data.indicators || mockData.radarData.indicators,
+        data: data.data || mockData.radarData.data
+      }
+      
+      if (charts.radar) {
+        initRadarChart()
+      }
+    }
+  } catch (error) {
+    console.error('加载雷达图数据失败:', error)
+  } finally {
+    dataLoading.value.radar = false
+  }
+}
+
+// 加载热力图数据
+const loadHeatmapData = async () => {
+  if (!selectedCity.value.id) return
+  
+  try {
+    dataLoading.value.heatmap = true
+    const data = await analyticsApi.getHeatmapData(selectedCity.value.id)
+    
+    if (data && data.length > 0) {
+      // 更新地图数据
+      const beijingBusinessAreas = data.map(item => ({
+        name: item.name,
+        coord: [item.longitude, item.latitude],
+        value: item.hotValue
+      }))
+      
+      // 地图功能已由BaiduMap组件处理
+      // if (charts.mainMap) {
+      //   initMainMap(beijingBusinessAreas)
+      // }
+    }
+  } catch (error) {
+    console.error('加载热力图数据失败:', error)
+  } finally {
+    dataLoading.value.heatmap = false
+  }
+}
+
+// 登录处理
+const handleLogin = async () => {
+  if (!loginForm.value.username || !loginForm.value.password) {
+    showNotification('请填写完整的登录信息', 'error')
+    return
+  }
+  
+  loginLoading.value = true
+  
+  try {
+    // 调用登录API
+    const response = await authApi.login({
+      username: loginForm.value.username,
+      password: loginForm.value.password,
+      remember: loginForm.value.remember
+    })
+    
+    // 保存token
+    if (response.accessToken) {
+      localStorage.setItem('access_token', response.accessToken)
+      localStorage.setItem('refresh_token', response.refreshToken)
+    }
+    
+    // 设置用户信息
+    userInfo.value = response.user || {
+      name: loginForm.value.username,
+      email: loginForm.value.username.includes('@') ? loginForm.value.username : `${loginForm.value.username}@example.com`,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(loginForm.value.username)}&background=667eea&color=fff`
+    }
+    
+    isLoggedIn.value = true
+    showLogin.value = false
+    
+    // 重置表单
+    loginForm.value = {
+      username: '',
+      password: '',
+      remember: false
+    }
+    
+    showNotification('登录成功！', 'success')
+  } catch (error) {
+    console.error('登录失败:', error)
+    showNotification(error.message || '登录失败，请检查用户名和密码', 'error')
+  } finally {
+    loginLoading.value = false
+  }
+}
+
+// 注册处理
+const handleRegister = async () => {
+  if (!registerForm.value.username || !registerForm.value.email || 
+      !registerForm.value.phone || !registerForm.value.password || 
+      !registerForm.value.confirmPassword) {
+    showNotification('请填写完整的注册信息', 'error')
+    return
+  }
+  
+  if (registerForm.value.password !== registerForm.value.confirmPassword) {
+    showNotification('两次输入的密码不一致', 'error')
+    return
+  }
+  
+  if (registerForm.value.password.length < 6) {
+    showNotification('密码长度至少为6位', 'error')
+    return
+  }
+  
+  if (!registerForm.value.agreeTerms) {
+    showNotification('请先同意用户协议和隐私政策', 'error')
+    return
+  }
+  
+  registerLoading.value = true
+  
+  try {
+    // 调用注册API
+    const response = await authApi.register({
+      username: registerForm.value.username,
+      email: registerForm.value.email,
+      phone: registerForm.value.phone,
+      password: registerForm.value.password,
+      confirmPassword: registerForm.value.confirmPassword
+    })
+    
+    // 保存注册信息用于预填登录表单
+    const registeredEmail = registerForm.value.email
+    const registeredPhone = registerForm.value.phone
+    
+    // 注册成功
+    showRegister.value = false
+    showLogin.value = true
+    
+    // 预填登录表单
+    loginForm.value.username = registeredEmail || registeredPhone
+    
+    // 重置注册表单
+    registerForm.value = {
+      username: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+      agreeTerms: false
+    }
+    
+    showNotification('注册成功！请登录', 'success')
+  } catch (error) {
+    console.error('注册失败:', error)
+    showNotification(error.message || '注册失败，请稍后重试', 'error')
+  } finally {
+    registerLoading.value = false
+  }
+}
+
+// 退出登录
+const logout = async () => {
+  try {
+    // 调用退出登录API
+    await authApi.logout()
+  } catch (error) {
+    console.error('退出登录失败:', error)
+  } finally {
+    // 清除本地存储
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    
+    // 重置状态
+    isLoggedIn.value = false
+    showUserMenu.value = false
+    userInfo.value = {
+      name: '',
+      email: '',
+      avatar: ''
+    }
+    
+    showNotification('已退出登录', 'info')
+  }
+}
+
+// 切换到注册
+const switchToRegister = () => {
+  showLogin.value = false
+  showRegister.value = true
+}
+
+// 切换到登录
+const switchToLogin = () => {
+  showRegister.value = false
+  showLogin.value = true
+}
+
+// 窗口大小改变时重新调整图表
+const handleResize = () => {
+  Object.values(charts).forEach(chart => {
+    chart && chart.resize()
+  })
+}
+
+// 检查用户登录状态
+const checkAuthStatus = async () => {
+  const token = localStorage.getItem('access_token')
+  if (token) {
+    try {
+      const userResponse = await authApi.getUserInfo()
+      userInfo.value = userResponse
+      isLoggedIn.value = true
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+      // Token可能已过期，清除本地存储
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+    }
+  }
+}
+
+// 组件挂载后初始化所有图表
+onMounted(async () => {
+  // 检查用户登录状态
+  await checkAuthStatus()
+  
+  // 初始化地图中心点
+  updateMapCenter(selectedCity.value)
+  
+  await nextTick(() => {
+    initHotRankingChart()
+    initHourlyFlowChart()
+    initCategoryChart()
+    initSentimentChart()
+    initTrendChart()
+    initRadarChart()
+    // initMainMap() // 已移除，使用BaiduMap组件
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', handleResize)
+  })
+  
+  // 加载初始数据
+  loadAllData()
+  loadBusinessAreas()
+})
+
+// 监听城市变化
+watch(() => selectedCity.value.id, (newCityId, oldCityId) => {
+  if (newCityId && newCityId !== oldCityId) {
+    loadAllData()
+    loadBusinessAreas()
+  }
+})
+
+// 定时更新时间
+setInterval(() => {
+  updateTime.value = new Date().toLocaleString()
+}, 1000)
+</script>
+
+<style scoped>
+.dashboard-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #0c1426 0%, #1a2b4a 100%);
+  color: #fff;
+}
+
+/* 标题栏样式 */
+.dashboard-header {
+  height: 80px;
+  background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header-left {
+  flex: 1;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-title h1 {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 5px;
+  background: linear-gradient(45deg, #fff, #8c9eff);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-info {
+  font-size: 14px;
+  color: #b3c6ff;
+}
+
+.separator {
+  margin: 0 15px;
+  color: #666;
+}
+
+.status-online {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.status-offline {
+  color: #f44336;
+  font-weight: bold;
+}
+
+/* 主体内容样式 */
+.dashboard-main {
+  flex: 1;
+  display: flex;
+  padding: 20px;
+  gap: 20px;
+}
+
+.left-charts, .right-charts {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.center-map {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(26, 43, 74, 0.3);
+  border-radius: 12px;
+  border: 1px solid #2a3f5f;
+  overflow: hidden;
+}
+
+.map-controls {
+  height: 60px;
+  background: rgba(30, 60, 114, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid #2a3f5f;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-box input {
+  width: 300px;
+  height: 36px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #2a3f5f;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.search-box input::placeholder {
+  color: #8c9eff;
+}
+
+.search-btn {
+  height: 36px;
+  padding: 0 16px;
+  background: linear-gradient(45deg, #667eea, #764ba2);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.search-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.distance-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #8c9eff;
+}
+
+.distance-selector select {
+  height: 36px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #2a3f5f;
+  border-radius: 6px;
+  color: #fff;
+}
+
+.map-content {
+  flex: 1;
+  position: relative;
+}
+
+.map-legend {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  background: rgba(30, 60, 114, 0.3);
+  border-top: 1px solid #2a3f5f;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #8c9eff;
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.legend-color.hot {
+  background: #ff4444;
+}
+
+.legend-color.warm {
+  background: #ffd700;
+}
+
+.legend-color.cool {
+  background: #4fc3f7;
+}
+
+/* 图表容器样式 */
+.chart-container {
+  background: rgba(26, 43, 74, 0.3);
+  border-radius: 12px;
+  border: 1px solid #2a3f5f;
+  overflow: hidden;
+  height: 350px;
+}
+
+.chart-title {
+  height: 50px;
+  line-height: 50px;
+  padding: 0 20px;
+  background: rgba(30, 60, 114, 0.5);
+  border-bottom: 1px solid #2a3f5f;
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.chart-content {
+  height: 300px;
+}
+
+/* 底部图表样式 */
+.dashboard-footer {
+  height: 220px;
+  display: flex;
+  padding: 0 20px 20px;
+  gap: 20px;
+}
+
+.bottom-chart {
+  flex: 1;
+  background: rgba(26, 43, 74, 0.3);
+  border-radius: 12px;
+  border: 1px solid #2a3f5f;
+  overflow: hidden;
+}
+
+.bottom-chart .chart-title {
+  height: 40px;
+  line-height: 40px;
+  font-size: 14px;
+}
+
+.bottom-chart .chart-content {
+  height: 180px;
+}
+
+/* 响应式设计 */
+@media (max-width: 1600px) {
+  .left-charts, .right-charts {
+    width: 280px;
+  }
+  
+  .search-box input {
+    width: 250px;
+  }
+}
+
+@media (max-width: 1400px) {
+  .header-title h1 {
+    font-size: 24px;
+  }
+  
+  .chart-container {
+    height: 320px;
+  }
+  
+  .chart-content {
+    height: 270px;
+  }
+}
+
+/* 用户认证相关样式 */
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-actions .modern-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.user-actions .modern-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.user-profile {
+  position: relative;
+}
+
+.profile-dropdown {
+  position: relative;
+}
+
+.profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.profile-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 8px 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  color: #fff;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.dropdown-item svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 8px 0;
+}
+
+/* 模态框样式 */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.modal-header h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.auth-form {
+  width: 100%;
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #667eea;
+}
+
+.forgot-link, .terms-link {
+  color: #667eea;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.forgot-link:hover, .terms-link:hover {
+  color: #5a6fd8;
+  text-decoration: underline;
+}
+
+.full-width {
+  width: 100%;
+  justify-content: center;
+}
+
+.auth-divider {
+  position: relative;
+  text-align: center;
+  margin: 24px 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+}
+
+.auth-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 1;
+}
+
+.auth-divider span {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0 16px;
+  position: relative;
+  z-index: 2;
+}
+
+.social-login {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.social-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.social-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.social-btn.wechat:hover {
+  background: rgba(7, 193, 96, 0.2);
+  border-color: #07c160;
+}
+
+.social-btn.qq:hover {
+  background: rgba(18, 183, 245, 0.2);
+  border-color: #12b7f5;
+}
+
+.auth-footer {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+.auth-footer a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-footer a:hover {
+  color: #5a6fd8;
+  text-decoration: underline;
+}
+
+/* 响应式设计 - 认证相关 */
+@media (max-width: 768px) {
+  .user-actions .modern-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .user-actions .modern-btn span {
+    display: none;
+  }
+  
+  .modal-content {
+    margin: 20px;
+    max-width: none;
+    width: calc(100% - 40px);
+  }
+  
+  .social-login {
+    flex-direction: column;
+  }
+}
+</style>

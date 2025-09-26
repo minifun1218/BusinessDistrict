@@ -10,7 +10,8 @@ from flask import Blueprint, request
 from sqlalchemy import func, desc
 from app.extensions import db
 from app.models.city import City
-from app.models.business_area import BusinessArea, Store
+from app.models.business_area import BusinessArea
+from app.models.store import Store
 from app.utils.response import success_response, error_response
 
 # 创建数据分析蓝图

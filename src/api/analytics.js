@@ -88,32 +88,32 @@ export const analyticsApi = {
   },
 
   // 获取特定商圈的热度排行数据
-  getAreaHotRankingData(areaId) {
-    return http.get('/analytics/area-hot-ranking', { area_id: areaId })
+  getAreaHotRankingData(areaName, cityId) {
+    return http.get('/analytics/area-hot-ranking', { area_name: areaName, city_id: cityId })
   },
 
   // 获取特定商圈的客流数据
-  getAreaHourlyFlowData(areaId) {
-    return http.get('/analytics/area-hourly-flow', { area_id: areaId })
+  getAreaHourlyFlowData(areaName, cityId) {
+    return http.get('/analytics/area-hourly-flow', { area_name: areaName, city_id: cityId })
   },
 
   // 获取特定商圈的类型分布数据
-  getAreaCategoryDistribution(areaId) {
-    return http.get('/analytics/area-category-distribution', { area_id: areaId })
+  getAreaCategoryDistribution(areaName, cityId) {
+    return http.get('/analytics/area-category-distribution', { area_name: areaName, city_id: cityId })
   },
 
   // 获取特定商圈的情感分析数据
-  getAreaSentimentAnalysis(areaId) {
-    return http.get('/analytics/area-sentiment-analysis', { area_id: areaId })
+  getAreaSentimentAnalysis(areaName, cityId) {
+    return http.get('/analytics/area-sentiment-analysis', { area_name: areaName, city_id: cityId })
   },
 
   // 获取特定商圈的消费趋势数据
-  getAreaConsumptionTrend(areaId) {
-    return http.get('/analytics/area-consumption-trend', { area_id: areaId })
+  getAreaConsumptionTrend(areaName, cityId) {
+    return http.get('/analytics/area-consumption-trend', { area_name: areaName, city_id: cityId })
   },
 
   // 获取特定商圈的雷达对比数据
-  getAreaRadarComparisonData(areaIds) {
-    return http.post('/analytics/area-radar-comparison', { area_ids: areaIds })
+  getAreaRadarComparisonData(areaNames, cityId) {
+    return http.post('/analytics/area-radar-comparison', { area_names: areaNames, city_id: cityId })
   }
 }

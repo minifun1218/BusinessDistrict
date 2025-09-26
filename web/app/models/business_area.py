@@ -6,6 +6,7 @@
 
 from datetime import datetime
 from app.extensions import db
+import json
 
 class BusinessArea(db.Model):
     """商圈模型"""
@@ -31,24 +32,110 @@ class BusinessArea(db.Model):
     customer_flow = db.Column(db.Integer, default=0)  # 日均客流量
     store_count = db.Column(db.Integer, default=0)  # 店铺数量
     rating = db.Column(db.Float, default=0.0)  # 评分
+    review_count = db.Column(db.Integer, default=0)  # 评价数量
     
     # 基本信息
     address = db.Column(db.Text, nullable=True)
     description = db.Column(db.Text, nullable=True)
     opening_hours = db.Column(db.String(100), nullable=True)
     
-    # JSON字段
-    facilities = db.Column(db.JSON, nullable=True)  # 配套设施
-    transportation = db.Column(db.JSON, nullable=True)  # 交通信息
-    images = db.Column(db.JSON, nullable=True)  # 图片列表
-    tags = db.Column(db.JSON, nullable=True)  # 标签
+    # JSON字段（SQLite兼容）
+    facilities = db.Column(db.Text, nullable=True)  # 配套设施JSON
+    transportation = db.Column(db.Text, nullable=True)  # 交通信息JSON
+    images = db.Column(db.Text, nullable=True)  # 图片列表JSON
+    tags = db.Column(db.Text, nullable=True)  # 标签JSON
     
     # 时间戳
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # 关系
-    stores = db.relationship('Store', backref='business_area', lazy='dynamic')
+    stores = db.relationship('Store', backref='business_area', lazy='dynamic', cascade='all, delete-orphan')
+    area_reviews = db.relationship('AreaReview', backref='business_area', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __init__(self, **kwargs):
+        """初始化方法，处理JSON字段"""
+        # 处理JSON字段
+        json_fields = ['facilities', 'transportation', 'images', 'tags']
+        json_values = {}
+        
+        # 提取JSON字段的值，包括空列表
+        for field in json_fields:
+            if field in kwargs:
+                value = kwargs[field]
+                if isinstance(value, (list, dict)) or value is None:
+                    json_values[field] = kwargs.pop(field)
+        
+        # 调用父类初始化
+        super().__init__(**kwargs)
+        
+        # 设置JSON字段
+        for field, value in json_values.items():
+            getattr(self, f'set_{field}')(value)
+    
+    def get_facilities(self):
+        """获取设施信息"""
+        if self.facilities:
+            try:
+                return json.loads(self.facilities)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    
+    def set_facilities(self, facilities_list):
+        """设置设施信息"""
+        if facilities_list is not None:
+            self.facilities = json.dumps(facilities_list)
+        else:
+            self.facilities = None
+    
+    def get_transportation(self):
+        """获取交通信息"""
+        if self.transportation:
+            try:
+                return json.loads(self.transportation)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    
+    def set_transportation(self, transportation_list):
+        """设置交通信息"""
+        if transportation_list is not None:
+            self.transportation = json.dumps(transportation_list)
+        else:
+            self.transportation = None
+    
+    def get_images(self):
+        """获取图片列表"""
+        if self.images:
+            try:
+                return json.loads(self.images)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    
+    def set_images(self, images_list):
+        """设置图片列表"""
+        if images_list is not None:
+            self.images = json.dumps(images_list)
+        else:
+            self.images = None
+    
+    def get_tags(self):
+        """获取标签列表"""
+        if self.tags:
+            try:
+                return json.loads(self.tags)
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    
+    def set_tags(self, tags_list):
+        """设置标签列表"""
+        if tags_list is not None:
+            self.tags = json.dumps(tags_list)
+        else:
+            self.tags = None
     
     def to_dict(self):
         """转换为字典"""
@@ -68,86 +155,17 @@ class BusinessArea(db.Model):
             'customer_flow': self.customer_flow,
             'store_count': self.store_count,
             'rating': self.rating,
+            'review_count': self.review_count,
             'address': self.address,
             'description': self.description,
             'opening_hours': self.opening_hours,
-            'facilities': self.facilities or [],
-            'transportation': self.transportation or [],
-            'images': self.images or [],
-            'tags': self.tags or [],
+            'facilities': self.get_facilities(),
+            'transportation': self.get_transportation(),
+            'images': self.get_images(),
+            'tags': self.get_tags(),
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
     
     def __repr__(self):
         return f'<BusinessArea {self.name}>'
-
-class Store(db.Model):
-    """店铺模型"""
-    __tablename__ = 'stores'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False, index=True)
-    business_area_id = db.Column(db.String(50), db.ForeignKey('business_areas.id'), 
-                                nullable=False, index=True)
-    
-    # 店铺分类
-    category = db.Column(db.Enum('restaurant', 'retail', 'entertainment', 'service', 
-                                name='store_category_enum'), nullable=False, index=True)
-    sub_category = db.Column(db.String(50), nullable=True, index=True)
-    
-    # 地理信息
-    longitude = db.Column(db.Float, nullable=False)
-    latitude = db.Column(db.Float, nullable=False)
-    
-    # 店铺数据
-    rating = db.Column(db.Float, default=0.0, index=True)
-    review_count = db.Column(db.Integer, default=0)
-    avg_price = db.Column(db.Float, default=0.0)
-    
-    # 基本信息
-    phone = db.Column(db.String(20), nullable=True)
-    address = db.Column(db.String(255), nullable=True)
-    opening_hours = db.Column(db.String(100), nullable=True)
-    description = db.Column(db.Text, nullable=True)
-    
-    # JSON字段
-    images = db.Column(db.JSON, nullable=True)
-    tags = db.Column(db.JSON, nullable=True)
-    facilities = db.Column(db.JSON, nullable=True)
-    
-    # 推荐状态
-    is_recommended = db.Column(db.Boolean, default=False, index=True)
-    
-    # 时间戳
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    def to_dict(self):
-        """转换为字典"""
-        return {
-            'id': self.id,
-            'name': self.name,
-            'business_area_id': self.business_area_id,
-            'businessAreaName': self.business_area.name if self.business_area else None,
-            'category': self.category,
-            'sub_category': self.sub_category,
-            'longitude': self.longitude,
-            'latitude': self.latitude,
-            'rating': self.rating,
-            'review_count': self.review_count,
-            'avg_price': self.avg_price,
-            'phone': self.phone,
-            'address': self.address,
-            'opening_hours': self.opening_hours,
-            'description': self.description,
-            'images': self.images or [],
-            'tags': self.tags or [],
-            'facilities': self.facilities or [],
-            'is_recommended': self.is_recommended,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
-        }
-    
-    def __repr__(self):
-        return f'<Store {self.name}>'

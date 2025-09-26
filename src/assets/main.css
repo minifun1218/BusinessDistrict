@@ -17,7 +17,7 @@ html, body {
 
 /* 现代化背景渐变 */
 body {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: #0F1927;
   background-attachment: fixed;
 }
 

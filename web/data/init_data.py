@@ -8,12 +8,13 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from ..app import create_app
-from ..app.extensions import db
-from ..app.models.city import City
-from ..app.models.business_area import BusinessArea, Store
-from ..app.models.user import User
-from ..app.utils.auth import hash_password
+from app import create_app
+from app.extensions import db
+from app.models.city import City
+from app.models.business_area import BusinessArea
+from app.models.store import Store
+from app.models.user import User
+from app.utils.auth import hash_password
 
 def init_cities():
     """初始化城市数据"""

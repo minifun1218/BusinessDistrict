@@ -10,7 +10,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 from app.extensions import db
-from app.models.business_area import BusinessArea, Store
+from app.models.business_area import BusinessArea
+from app.models.store import Store
 from app.models.city import City
 from .clients.baidu_client import BaiduMapClient
 from .clients.amap_client import AmapClient

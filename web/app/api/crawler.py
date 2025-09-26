@@ -224,7 +224,8 @@ def schedule_crawl_task():
 def check_data_quality():
     """检查数据质量"""
     try:
-        from app.models.business_area import BusinessArea, Store
+        from app.models.business_area import BusinessArea
+        from app.models.store import Store
         from sqlalchemy import func
         
         # 统计数据质量指标

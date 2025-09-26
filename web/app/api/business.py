@@ -8,7 +8,8 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 from sqlalchemy import or_, desc, func
 from app.extensions import db
-from app.models.business_area import BusinessArea, Store
+from app.models.business_area import BusinessArea
+from app.models.store import Store
 from app.models.city import City
 from app.utils.response import success_response, error_response, paginated_response
 import logging
@@ -347,6 +348,264 @@ def get_nearby_business_areas():
         return error_response('坐标格式不正确', 400)
     except Exception as e:
         return error_response(f'获取附近商圈失败: {str(e)}', 500)
+
+@business_bp.route('/search-and-save', methods=['POST', 'OPTIONS'])
+def search_and_save_business_areas():
+    """搜索并保存商圈数据（用于地图点击搜索）"""
+    try:
+        data = request.get_json()
+        if not data:
+            return error_response('请求数据不能为空', 400)
+        
+        longitude = float(data.get('longitude', 0))
+        latitude = float(data.get('latitude', 0))
+        radius = int(data.get('radius', 1000))
+        city_id = data.get('cityId', '')
+        search_areas = data.get('searchAreas', [])  # 从地图搜索得到的商圈数据
+        
+        if not longitude or not latitude:
+            return error_response('经纬度坐标不能为空', 400)
+        
+        # 首先检查数据库中是否已有该坐标附近的数据
+        existing_areas = []
+        tolerance = 0.001  # 坐标容差，约100米
+        
+        # 查找附近已存在的商圈
+        nearby_existing = BusinessArea.query.filter(
+            db.and_(
+                BusinessArea.longitude.between(longitude - tolerance, longitude + tolerance),
+                BusinessArea.latitude.between(latitude - tolerance, latitude + tolerance)
+            )
+        ).all()
+        
+        if nearby_existing:
+            # 如果数据库中已有附近数据，直接返回
+            logger.info(f"从数据库返回附近商圈数据: {len(nearby_existing)}个")
+            existing_areas = []
+            for area in nearby_existing:
+                area_dict = area.to_dict()
+                # 计算精确距离
+                distance = ((area.longitude - longitude) ** 2 + (area.latitude - latitude) ** 2) ** 0.5 * 111000
+                area_dict['distance'] = round(distance)
+                if distance <= radius:
+                    existing_areas.append(area_dict)
+            
+            existing_areas.sort(key=lambda x: x['distance'])
+            return success_response({
+                'areas': existing_areas[:20],
+                'source': 'database',
+                'cached': True
+            }, '从缓存获取附近商圈成功')
+        
+        # 如果数据库中没有数据，保存新搜索的数据
+        saved_areas = []
+        if search_areas:
+            for area_data in search_areas:
+                try:
+                    # 生成唯一ID
+                    import uuid
+                    area_id = f"area_{uuid.uuid4().hex[:12]}"
+                    
+                    # 构建商圈数据
+                    business_area_data = {
+                        'id': area_id,
+                        'name': area_data.get('name', ''),
+                        'city_id': city_id or 'beijing',
+                        'type': determine_area_type(area_data.get('category', '')),
+                        'level': 'C',  # 默认等级
+                        'longitude': float(area_data.get('longitude', longitude)),
+                        'latitude': float(area_data.get('latitude', latitude)),
+                        'hot_value': area_data.get('hotValue', 50),
+                        'avg_consumption': area_data.get('avgConsumption', 0),
+                        'store_count': area_data.get('storeCount', 0),
+                        'address': area_data.get('address', ''),
+                        'tags': area_data.get('tags', [])
+                    }
+                    
+                    # 创建商圈记录
+                    business_area = BusinessArea(**business_area_data)
+                    db.session.add(business_area)
+                    
+                    # 添加距离信息
+                    area_dict = business_area_data.copy()
+                    distance = area_data.get('distance', 0)
+                    area_dict['distance'] = distance
+                    saved_areas.append(area_dict)
+                    
+                    logger.info(f"保存商圈: {area_data.get('name', 'Unknown')}")
+                    
+                except Exception as e:
+                    logger.error(f"保存商圈数据失败: {str(e)}")
+                    continue
+            
+            # 提交数据库事务
+            try:
+                db.session.commit()
+                logger.info(f"成功保存 {len(saved_areas)} 个商圈到数据库")
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"数据库提交失败: {str(e)}")
+                return error_response('保存商圈数据失败', 500)
+        
+        # 按距离排序
+        saved_areas.sort(key=lambda x: x.get('distance', 0))
+        
+        return success_response({
+            'areas': saved_areas[:20],
+            'source': 'search_and_save',
+            'cached': False
+        }, f'搜索并保存 {len(saved_areas)} 个商圈成功')
+        
+    except ValueError:
+        return error_response('坐标格式不正确', 400)
+    except Exception as e:
+        logger.error(f"搜索并保存商圈失败: {str(e)}")
+        return error_response(f'搜索并保存商圈失败: {str(e)}', 500)
+
+def determine_area_type(category):
+    """根据类别确定商圈类型"""
+    if not category:
+        return 'mixed'
+    
+    category = category.lower()
+    if '购物' in category or 'shopping' in category or '商场' in category:
+        return 'shopping'
+    elif '餐饮' in category or '美食' in category or 'dining' in category:
+        return 'dining'
+    elif '娱乐' in category or 'entertainment' in category:
+        return 'entertainment'
+    else:
+        return 'mixed'
+
+@business_bp.route('/<area_id>/crawl-details', methods=['POST', 'OPTIONS'])
+def crawl_area_details(area_id):
+    """爬取商圈详细数据（大众点评等）"""
+    from datetime import datetime, timedelta
+    from app.crawler.data_sources.dianping_crawler import DianpingCrawler
+    
+    try:
+        # 验证商圈是否存在
+        area = BusinessArea.query.get(area_id)
+        if not area:
+            return error_response('商圈不存在', 404)
+        
+        # 检查是否有近2天内的数据
+        two_days_ago = datetime.utcnow() - timedelta(days=2)
+        recent_update = area.updated_at and area.updated_at > two_days_ago
+        
+        # 检查是否有详细的评价和店铺数据
+        has_detailed_data = (
+            area.stores.count() > 0 and 
+            area.rating > 0 and 
+            area.review_count > 0
+        )
+        
+        if recent_update and has_detailed_data:
+            logger.info(f"商圈 {area.name} 数据较新，直接返回缓存数据")
+            return success_response({
+                'area': area.to_dict(),
+                'cached': True,
+                'data_source': 'database',
+                'last_updated': area.updated_at.isoformat() if area.updated_at else None
+            }, '从缓存获取商圈详细数据成功')
+        
+        # 如果数据过期或不完整，启动爬虫获取最新数据
+        logger.info(f"开始爬取商圈 {area.name} 的详细数据")
+        
+        # 初始化大众点评爬虫
+        crawler = DianpingCrawler()
+        
+        # 爬取商圈详细信息
+        area_details = crawler.search_area_by_name(area.name, area.city.name if area.city else '北京')
+        
+        if area_details:
+            # 更新商圈基本信息
+            area.rating = area_details.get('rating', area.rating)
+            area.review_count = area_details.get('review_count', 0)
+            area.hot_value = area_details.get('hot_value', area.hot_value)
+            area.description = area_details.get('description', area.description)
+            area.updated_at = datetime.utcnow()
+            
+            # 获取商圈评价
+            reviews = crawler.get_area_reviews(area_id)
+            if reviews:
+                # 这里可以将评价存储到单独的评价表中
+                logger.info(f"获取到 {len(reviews)} 条商圈评价")
+            
+            # 爬取商圈内的店铺数据
+            stores_data = crawler.get_stores(
+                area_id, 
+                area.name,
+                area.latitude,
+                area.longitude
+            )
+            
+            if stores_data:
+                # 清除旧的店铺数据（可选）
+                existing_stores = Store.query.filter_by(business_area_id=area_id).all()
+                for store in existing_stores:
+                    db.session.delete(store)
+                
+                # 添加新的店铺数据
+                for store_data in stores_data:
+                    try:
+                        store = Store(**store_data)
+                        db.session.add(store)
+                        logger.info(f"添加店铺: {store_data.get('name', 'Unknown')}")
+                    except Exception as e:
+                        logger.error(f"添加店铺失败: {str(e)}")
+                        continue
+                
+                # 更新商圈统计信息
+                area.store_count = len(stores_data)
+                
+                # 计算平均评分和消费水平
+                if stores_data:
+                    avg_rating = sum(s.get('rating', 0) for s in stores_data) / len(stores_data)
+                    avg_price = sum(s.get('avg_price', 0) for s in stores_data) / len(stores_data)
+                    area.rating = round(avg_rating, 1) if avg_rating > 0 else area.rating
+                    area.avg_consumption = round(avg_price, 2) if avg_price > 0 else area.avg_consumption
+            
+            # 提交数据库更改
+            try:
+                db.session.commit()
+                logger.info(f"成功更新商圈 {area.name} 的详细数据")
+                
+                # 返回更新后的数据
+                updated_area = area.to_dict()
+                
+                # 添加额外的统计信息
+                updated_area.update({
+                    'store_statistics': {
+                        'total_stores': area.stores.count(),
+                        'by_category': dict(
+                            db.session.query(Store.category, func.count(Store.id))
+                            .filter_by(business_area_id=area_id)
+                            .group_by(Store.category)
+                            .all()
+                        ),
+                        'avg_rating': db.session.query(func.avg(Store.rating)).filter_by(business_area_id=area_id).scalar() or 0,
+                        'recommended_count': area.stores.filter_by(is_recommended=True).count()
+                    },
+                    'reviews_sample': reviews[:5] if reviews else [],  # 返回前5条评价作为样本
+                    'cached': False,
+                    'data_source': 'dianping_crawler',
+                    'crawl_time': datetime.utcnow().isoformat()
+                })
+                
+                return success_response(updated_area, f'成功爬取并更新商圈 {area.name} 的详细数据')
+                
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f"保存商圈数据失败: {str(e)}")
+                return error_response('保存商圈数据失败', 500)
+        else:
+            logger.warning(f"未能获取商圈 {area.name} 的详细数据")
+            return error_response('未能获取商圈详细数据，请稍后重试', 500)
+        
+    except Exception as e:
+        logger.error(f"爬取商圈详情失败: {str(e)}")
+        return error_response(f'爬取商圈详情失败: {str(e)}', 500)
 
 
 @business_bp.route('/areas/<int:area_id>/stores', methods=['GET', 'OPTIONS'])

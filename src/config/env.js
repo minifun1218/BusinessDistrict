@@ -7,18 +7,26 @@ export const ENV_CONFIG = {
   WEBSOCKET_URL: 'ws://localhost:3000/ws',
   
   // 地图API密钥 - 高德地图API密钥
-  MAP_API_KEY: '97407716929403378fa9e42d20c9b051',
+  MAP_API_KEY: '0d1192d32abfb14fa2c8f27a4c20784d',
   
   // 高德地图配置
   AMAP_CONFIG: {
-    key: '97407716929403378fa9e42d20c9b051', // 高德地图API密钥
+    key: '0d1192d32abfb14fa2c8f27a4c20784d', // 高德地图API密钥
+    securityJsCode: '97407716929403378fa9e42d20c9b051', // 高德地图安全密钥
     version: '2.0',
     defaultCenter: [116.4074, 39.9042], // 北京 [lng, lat]
     defaultZoom: 11,
     enableScrollWheelZoom: true,
     enableContinuousZoom: true,
     enableInertialDragging: true,
-    plugins: ['AMap.Scale', 'AMap.ToolBar', 'AMap.MapType', 'AMap.Geolocation']
+    plugins: ['AMap.Scale', 'AMap.ToolBar', 'AMap.MapType', 'AMap.Geolocation', 'AMap.PlaceSearch'],
+    AMapUI: {
+      version: '1.1',
+      plugins: ['overlay/SimpleMarker']
+    },
+    Loca: {
+      version: '2.0'
+    }
   },
   
   // 保留百度地图配置以防需要回退

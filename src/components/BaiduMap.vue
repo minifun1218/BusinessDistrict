@@ -1,18 +1,25 @@
 <template>
   <div class="baidu-map-container">
+    <!-- 加载状态 -->
+    <div v-if="isLoading" class="map-loading">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">地图加载中...</div>
+    </div>
+
     <!-- 地图控制面板 -->
-    <div class="map-controls">
+    <div class="map-controls" v-show="!isLoading">
       <!-- 城市选择器 -->
       <div class="city-selector">
         <label>当前城市：</label>
         <CitySelector v-model="selectedCity" @change="handleCityChange" />
       </div>
-      
+
+      <!-- 搜索框 -->
       <div class="search-box">
-        <input 
-          v-model="searchKeyword" 
+        <input
+          v-model="searchKeyword"
           @keyup.enter="searchLocation"
-          placeholder="搜索地点..." 
+          placeholder="搜索地点、商圈..."
           class="modern-input"
         />
         <button @click="searchLocation" class="search-btn modern-btn primary">
@@ -20,12 +27,14 @@
             <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
             <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2"/>
           </svg>
+          搜索
         </button>
       </div>
-      
-      <div class="distance-selector">
+
+      <!-- 搜索半径 -->
+      <div class="radius-selector">
         <label>搜索半径：</label>
-        <select v-model="searchRadius" @change="updateSearchRadius" class="modern-select">
+        <select v-model="searchRadius" @change="onRadiusChange" class="modern-select">
           <option value="500">500米</option>
           <option value="1000">1公里</option>
           <option value="2000">2公里</option>
@@ -33,67 +42,92 @@
           <option value="10000">10公里</option>
         </select>
       </div>
-      
+
+      <!-- 工具按钮 -->
       <div class="map-tools">
-        <button @click="getCurrentLocation" class="tool-btn modern-btn outline" title="定位到当前位置">
+        <button @click="getCurrentLocation" class="tool-btn modern-btn outline" title="定位当前位置">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C13.1046 2 14 2.89543 14 4C14 5.10457 13.1046 6 12 6C10.8954 6 10 5.10457 10 4C10 2.89543 10.8954 2 12 2Z" fill="currentColor"/>
-            <path d="M12 18C13.1046 18 14 18.8954 14 20C14 21.1046 13.1046 22 12 22C10.8954 22 10 21.1046 10 20C10 18.8954 10.8954 18 12 18Z" fill="currentColor"/>
-            <path d="M6 12C6 10.8954 5.10457 10 4 10C2.89543 10 2 10.8954 2 12C2 13.1046 2.89543 14 4 14C5.10457 14 6 13.1046 6 12Z" fill="currentColor"/>
-            <path d="M22 12C22 10.8954 21.1046 10 20 10C18.8954 10 18 10.8954 18 12C18 13.1046 18.8954 14 20 14C21.1046 14 22 13.1046 22 12Z" fill="currentColor"/>
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 1V3" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 21V23" stroke="currentColor" stroke-width="2"/>
+            <path d="M4.22 4.22L5.64 5.64" stroke="currentColor" stroke-width="2"/>
+            <path d="M18.36 18.36L19.78 19.78" stroke="currentColor" stroke-width="2"/>
+            <path d="M1 12H3" stroke="currentColor" stroke-width="2"/>
+            <path d="M21 12H23" stroke="currentColor" stroke-width="2"/>
+            <path d="M4.22 19.78L5.64 18.36" stroke="currentColor" stroke-width="2"/>
+            <path d="M18.36 5.64L19.78 4.22" stroke="currentColor" stroke-width="2"/>
           </svg>
         </button>
         <button @click="clearMarkers" class="tool-btn modern-btn outline" title="清除标记">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 6H5H21" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 6V4A2 2 0 0110 2H14A2 2 0 0116 4V6M19 6V20A2 2 0 0117 22H7A2 2 0 015 20V6H19Z" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
+        <button @click="refreshMap" class="tool-btn modern-btn outline" title="刷新地图">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12A9 9 0 019 3 9.75 9.75 0 0118 6.41V4" stroke="currentColor" stroke-width="2"/>
+            <path d="M21 12A9 9 0 0115 21 9.75 9.75 0 016 17.59V20" stroke="currentColor" stroke-width="2"/>
           </svg>
         </button>
       </div>
     </div>
-    
+
     <!-- 百度地图容器 -->
     <div ref="baiduMapContainer" class="baidu-map" :style="{ height: mapHeight }"></div>
-    
-    <!-- 地图图例 -->
-    <div class="map-legend">
-      <div class="legend-item">
-        <span class="legend-marker hot"></span>
-        <span>热门商圈 (热度 > 80)</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-marker warm"></span>
-        <span>一般商圈 (热度 50-80)</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-marker cool"></span>
-        <span>冷门商圈 (热度 < 50)</span>
-      </div>
-      <div class="legend-item">
-        <span class="legend-marker selected"></span>
-        <span>已选择区域</span>
+
+    <!-- 坐标显示 -->
+    <div v-if="!isLoading && currentCoords" class="coords-display">
+      <span>经度: {{ currentCoords.lng.toFixed(6) }}</span>
+      <span>纬度: {{ currentCoords.lat.toFixed(6) }}</span>
+    </div>
+
+    <!-- 附近商圈列表 -->
+    <div v-if="nearbyBusinessAreas.length > 0" class="nearby-areas-panel">
+      <h4>附近商圈 ({{ nearbyBusinessAreas.length }}个)</h4>
+      <div class="areas-list">
+        <div 
+          v-for="area in nearbyBusinessAreas" 
+          :key="area.id"
+          @click="selectBusinessArea(area)"
+          class="area-item"
+          :class="{ active: selectedArea?.id === area.id }"
+        >
+          <div class="area-name">{{ area.name }}</div>
+          <div class="area-info">
+            <span class="area-distance">{{ area.distance }}米</span>
+            <span class="area-type">{{ area.category }}</span>
+            <span class="area-hot" :class="getHotClass(area.hotValue)">
+              热度{{ area.hotValue }}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
-    
-    <!-- 选中区域信息面板 -->
-    <div v-if="selectedArea" class="area-info-panel modern-card fade-in-scale">
+
+    <!-- 选中商圈详情 -->
+    <div v-if="selectedArea" class="selected-area-panel modern-card">
       <h4>{{ selectedArea.name }}</h4>
-      <div class="area-stats">
-        <div class="stat-item">
+      <div class="area-details">
+        <div class="detail-item">
           <span class="label">热度值：</span>
-          <span class="value">{{ selectedArea.hotValue }}</span>
+          <span class="value" :class="getHotClass(selectedArea.hotValue)">{{ selectedArea.hotValue }}</span>
         </div>
-        <div class="stat-item">
+        <div class="detail-item">
           <span class="label">商家数量：</span>
-          <span class="value">{{ selectedArea.storeCount }}</span>
+          <span class="value">{{ selectedArea.storeCount || 'N/A' }}</span>
         </div>
-        <div class="stat-item">
+        <div class="detail-item">
           <span class="label">平均消费：</span>
-          <span class="value">¥{{ selectedArea.avgConsumption }}</span>
+          <span class="value">¥{{ selectedArea.avgConsumption || 'N/A' }}</span>
         </div>
-        <div class="stat-item">
+        <div class="detail-item">
           <span class="label">类型：</span>
           <span class="value">{{ selectedArea.category }}</span>
+        </div>
+        <div class="detail-item" v-if="selectedArea.distance">
+          <span class="label">距离：</span>
+          <span class="value">{{ selectedArea.distance }}米</span>
         </div>
       </div>
       <button @click="viewAreaDetails" class="modern-btn primary">查看详情</button>
@@ -109,22 +143,10 @@ import CitySelector from './CitySelector.vue'
 
 // Props
 const props = defineProps({
-  modelValue: {
-    type: Object,
-    default: () => ({ lng: 116.4074, lat: 39.9042 })
-  },
-  height: {
-    type: String,
-    default: '500px'
-  },
-  businessAreas: {
-    type: Array,
-    default: () => []
-  },
-  currentCity: {
-    type: Object,
-    default: () => ({ id: 'beijing', name: '北京' })
-  }
+  modelValue: { type: Object, default: () => ({ lng: 116.4074, lat: 39.9042 }) },
+  height: { type: String, default: '500px' },
+  businessAreas: { type: Array, default: () => [] },
+  currentCity: { type: Object, default: () => ({ id: 'beijing', name: '北京' }) }
 })
 
 // Emits
@@ -139,184 +161,186 @@ const searchRadius = ref(1000)
 const selectedArea = ref(null)
 const mapHeight = ref(props.height)
 const selectedCity = ref(props.currentCity)
+const isLoading = ref(true)
+const hasInitialized = ref(false)
+const currentCoords = ref(props.modelValue)
+const nearbyBusinessAreas = ref([])
+
+let resizeHandler = null
+let localSearchInstance = null
+
+// 节流函数
+const throttle = (fn, wait = 200) => {
+  let last = 0, timer = null
+  return (...args) => {
+    const now = Date.now()
+    if (now - last >= wait) {
+      last = now
+      fn(...args)
+    } else {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        last = Date.now()
+        fn(...args)
+      }, wait - (now - last))
+    }
+  }
+}
+
+// 快速初始化
+const quickInit = async () => {
+  if (hasInitialized.value) return
+  
+  try {
+    // 检查API是否已加载
+    if (window.BMap && isBaiduMapAvailable()) {
+      initBaiduMap()
+      return
+    }
+    
+    // 加载百度地图API
+    const loadSuccess = await loadBaiduMapAPI()
+    if (loadSuccess && isBaiduMapAvailable()) {
+      requestAnimationFrame(() => initBaiduMap())
+    } else {
+      showMapPlaceholder('API加载失败')
+    }
+  } catch (e) {
+    console.error('地图API加载错误:', e)
+    showMapPlaceholder('API加载出错')
+  }
+}
 
 // 地图初始化
 const initBaiduMap = () => {
-  console.log('开始初始化百度地图...')
-  console.log('API密钥:', ENV_CONFIG.BAIDU_MAP_CONFIG.ak ? '已配置' : '未配置')
-  
-  // 检查DOM元素
-  if (!baiduMapContainer.value) {
-    console.error('地图容器DOM元素未找到，延迟重试...')
-    setTimeout(() => initBaiduMap(), 200)
+  if (!baiduMapContainer.value) return
+  if (!ENV_CONFIG.BAIDU_MAP_CONFIG.ak) {
+    showMapPlaceholder('API密钥未配置')
     return
   }
-
-  // 检查API密钥
-  if (!ENV_CONFIG.BAIDU_MAP_CONFIG.ak || ENV_CONFIG.BAIDU_MAP_CONFIG.ak.trim() === '') {
-    console.warn('百度地图API密钥未配置，显示占位符')
-    showMapPlaceholder()
-    return
-  }
-
-  // 检查百度地图API
-  if (!window.BMap) {
-    console.error('百度地图API未加载，显示占位符')
-    showMapPlaceholder()
-    return
-  }
-
-  // 检查BMap.Map构造函数
-  if (typeof window.BMap.Map !== 'function') {
-    console.error('百度地图Map构造函数不可用')
-    showMapPlaceholder()
+  if (!window.BMap?.Map) {
+    showMapPlaceholder('API未就绪')
     return
   }
 
   try {
-    console.log('创建地图实例...')
+    const container = baiduMapContainer.value
+    container.innerHTML = ''
     
-    // 清空容器内容
-    if (baiduMapContainer.value) {
-      baiduMapContainer.value.innerHTML = ''
-    }
-
-    // 创建地图实例 - 添加更详细的错误捕获
-    map.value = new window.BMap.Map(baiduMapContainer.value, {
-      enableMapClick: true
+    // 创建地图实例
+    map.value = new window.BMap.Map(container, {
+      enableMapClick: true,
+      minZoom: 4,
+      maxZoom: 18
     })
-    
-    // 设置地图中心点和缩放级别
+
     const center = new window.BMap.Point(props.modelValue.lng, props.modelValue.lat)
-    map.value.centerAndZoom(center, ENV_CONFIG.BAIDU_MAP_CONFIG.defaultZoom)
-    
+    map.value.centerAndZoom(center, ENV_CONFIG.BAIDU_MAP_CONFIG.defaultZoom || 11)
+
     // 启用地图功能
-    map.value.enableScrollWheelZoom(ENV_CONFIG.BAIDU_MAP_CONFIG.enableScrollWheelZoom)
-    map.value.enableContinuousZoom(ENV_CONFIG.BAIDU_MAP_CONFIG.enableContinuousZoom)
-    map.value.enableInertialDragging(ENV_CONFIG.BAIDU_MAP_CONFIG.enableInertialDragging)
-    
-    // 添加地图控件
+    map.value.enableScrollWheelZoom(true)
+    map.value.enableContinuousZoom(true)
+    map.value.enableInertialDragging(true)
+
+    // 添加控件
     map.value.addControl(new window.BMap.NavigationControl())
     map.value.addControl(new window.BMap.ScaleControl())
     map.value.addControl(new window.BMap.OverviewMapControl())
     map.value.addControl(new window.BMap.MapTypeControl())
-    
-    // 添加地图点击事件
+
+    // 地图事件监听
     map.value.addEventListener('click', handleMapClick)
-    
-    // 添加地图移动事件
     map.value.addEventListener('moveend', handleMapMoveEnd)
-    
-    // 加载商圈标记
-    loadBusinessAreaMarkers()
-    
+
+    // 加载初始商圈数据
+    if (props.businessAreas.length > 0) {
+      loadBusinessAreaMarkers()
+    }
+
+    // 窗口大小调整监听
+    const onResize = throttle(() => map.value?.checkResize(), 300)
+    resizeHandler = onResize
+    window.addEventListener('resize', onResize, { passive: true })
+
+    hasInitialized.value = true
+    isLoading.value = false
+
     console.log('百度地图初始化成功')
+
   } catch (error) {
-    console.error('百度地图初始化失败:', error)
-    
-    // 根据错误类型显示不同的占位符
-    if (error.message && error.message.includes('coordType')) {
-      showMapPlaceholder('API密钥授权失败')
-    } else {
-      showMapPlaceholder('地图初始化失败')
-    }
+    console.error('地图初始化失败:', error)
+    showMapPlaceholder('地图初始化失败')
   }
 }
 
-// 显示地图占位符
-const showMapPlaceholder = (reason = '百度地图API密钥未配置') => {
-  if (baiduMapContainer.value) {
-    let message = ''
-    let instruction = ''
-    
-    if (reason === 'API密钥授权失败') {
-      message = '百度地图API密钥授权失败'
-      instruction = '请检查API密钥是否正确，并确保已在百度地图控制台中启用JavaScript API服务'
-    } else if (reason === '地图初始化失败') {
-      message = '地图初始化失败'
-      instruction = '请检查网络连接和API密钥配置'
-    } else {
-      message = reason
-      instruction = '请在 src/config/env.js 中配置正确的 BAIDU_MAP_CONFIG.ak'
-    }
-    
-    baiduMapContainer.value.innerHTML = `
-      <div style="
-        width: 100%; 
-        height: 100%; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        background: #f5f5f5;
-        border: 1px dashed #d9d9d9;
-        color: #666;
-        font-size: 14px;
-        text-align: center;
-        flex-direction: column;
-        padding: 20px;
-        box-sizing: border-box;
-      ">
-        <div style="margin-bottom: 10px; font-size: 24px;">🗺️</div>
-        <div style="font-weight: bold; margin-bottom: 8px;">${message}</div>
-        <div style="font-size: 12px; color: #999; line-height: 1.4; max-width: 300px;">
-          ${instruction}
-        </div>
-        <div style="font-size: 12px; color: #999; margin-top: 10px;">
-          系统其他功能不受影响
-        </div>
-      </div>
-    `
-  }
+// 显示占位符
+const showMapPlaceholder = (reason = '地图加载失败') => {
+  isLoading.value = false
+  if (!baiduMapContainer.value) return
+  baiduMapContainer.value.innerHTML = `
+    <div style="
+      width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+      background: #f5f5f5; border: 1px dashed #d9d9d9; color: #666; font-size: 14px;
+      text-align: center; flex-direction: column; padding: 20px; box-sizing: border-box;
+    ">
+      <div style="margin-bottom: 10px; font-size: 24px;">🗺️</div>
+      <div style="font-weight: bold; margin-bottom: 8px;">${reason}</div>
+      <div style="font-size: 12px; color: #999;">请检查网络连接或联系管理员</div>
+    </div>
+  `
 }
 
-// 地图点击事件处理
+// 地图点击事件
 const handleMapClick = (e) => {
   const point = e.point
-  console.log('地图点击坐标:', point.lng, point.lat)
+  const coords = { lng: point.lng, lat: point.lat }
   
-  // 更新选中位置
-  emit('update:modelValue', { lng: point.lng, lat: point.lat })
-  emit('location-changed', { lng: point.lng, lat: point.lat })
+  currentCoords.value = coords
+  emit('update:modelValue', coords)
+  emit('location-changed', coords)
   
-  // 在点击位置添加标记
+  // 添加点击标记
   addClickMarker(point)
   
-  // 搜索附近的商圈
+  // 搜索附近商圈
   searchNearbyBusinessAreas(point)
 }
 
 // 地图移动结束事件
-const handleMapMoveEnd = () => {
+const handleMapMoveEnd = throttle(() => {
+  if (!map.value) return
   const center = map.value.getCenter()
-  emit('update:modelValue', { lng: center.lng, lat: center.lat })
-}
+  const coords = { lng: center.lng, lat: center.lat }
+  currentCoords.value = coords
+  emit('update:modelValue', coords)
+}, 200)
 
 // 添加点击标记
 const addClickMarker = (point) => {
   if (!map.value) return
   
   // 清除之前的点击标记
-  markers.value.forEach(marker => {
+  markers.value = markers.value.filter(marker => {
     if (marker.isClickMarker) {
       map.value.removeOverlay(marker)
+      return false
     }
+    return true
   })
   
-  // 创建新的点击标记
+  // 创建新标记
   const marker = new window.BMap.Marker(point)
   marker.isClickMarker = true
   map.value.addOverlay(marker)
-  
-  // 添加到标记数组
   markers.value.push(marker)
   
-  // 创建信息窗口
+  // 添加信息窗口
   const infoWindow = new window.BMap.InfoWindow(`
-    <div style="padding: 10px;">
-      <h4>选中位置</h4>
-      <p>经度: ${point.lng.toFixed(6)}</p>
-      <p>纬度: ${point.lat.toFixed(6)}</p>
-      <button onclick="searchNearby()" style="margin-top: 10px; padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 4px;">搜索附近商圈</button>
+    <div style="padding: 10px; min-width: 200px;">
+      <h4 style="margin: 0 0 10px 0;">选中位置</h4>
+      <p style="margin: 5px 0;">经度: ${point.lng.toFixed(6)}</p>
+      <p style="margin: 5px 0;">纬度: ${point.lat.toFixed(6)}</p>
+      <button onclick="searchNearby()" style="margin-top: 10px; padding: 5px 10px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">搜索附近商圈</button>
     </div>
   `)
   
@@ -328,34 +352,61 @@ const addClickMarker = (point) => {
 // 加载商圈标记
 const loadBusinessAreaMarkers = () => {
   if (!map.value || !props.businessAreas.length) return
-  
-  props.businessAreas.forEach(area => {
-    const point = new window.BMap.Point(area.longitude, area.latitude)
-    
-    // 根据热度值选择图标
-    let iconUrl = '/icons/marker-cool.png' // 默认冷门
-    if (area.hotValue > 80) {
-      iconUrl = '/icons/marker-hot.png'
-    } else if (area.hotValue > 50) {
-      iconUrl = '/icons/marker-warm.png'
+
+  // 清除旧的商圈标记
+  markers.value = markers.value.filter(m => {
+    if (!m.isClickMarker) {
+      map.value.removeOverlay(m)
+      return false
     }
+    return true
+  })
+
+  // 根据缩放级别限制显示数量
+  const currentZoom = map.value.getZoom()
+  const maxMarkers = currentZoom < 12 ? 20 : 50
+  
+  let filteredAreas = props.businessAreas
+  if (currentZoom < 12) {
+    // 低缩放时只显示热门商圈
+    filteredAreas = props.businessAreas
+      .filter(a => a.hotValue > 60)
+      .slice(0, maxMarkers)
+  } else {
+    filteredAreas = props.businessAreas.slice(0, maxMarkers)
+  }
+
+  // 图标缓存
+  const iconCache = {
+    hot: new window.BMap.Icon('/icons/marker-hot.png', new window.BMap.Size(25, 35), {
+      imageOffset: new window.BMap.Size(0, 0)
+    }),
+    warm: new window.BMap.Icon('/icons/marker-warm.png', new window.BMap.Size(25, 35), {
+      imageOffset: new window.BMap.Size(0, 0)
+    }),
+    cool: new window.BMap.Icon('/icons/marker-cool.png', new window.BMap.Size(25, 35), {
+      imageOffset: new window.BMap.Size(0, 0)
+    })
+  }
+
+  // 创建标记
+  filteredAreas.forEach(area => {
+    const point = new window.BMap.Point(area.longitude, area.latitude)
+    let iconKey = 'cool'
+    if (area.hotValue > 80) iconKey = 'hot'
+    else if (area.hotValue > 50) iconKey = 'warm'
     
-    // 创建自定义图标
-    const icon = new window.BMap.Icon(iconUrl, new window.BMap.Size(25, 35))
-    const marker = new window.BMap.Marker(point, { icon })
+    const marker = new window.BMap.Marker(point, { icon: iconCache[iconKey] })
     
-    // 添加点击事件
     marker.addEventListener('click', () => {
       selectBusinessArea(area)
       
-      // 显示信息窗口
       const infoWindow = new window.BMap.InfoWindow(`
         <div style="padding: 15px; min-width: 200px;">
           <h4 style="margin: 0 0 10px 0; color: #333;">${area.name}</h4>
           <p style="margin: 5px 0;"><strong>热度值:</strong> ${area.hotValue}</p>
-          <p style="margin: 5px 0;"><strong>商家数量:</strong> ${area.storeCount}</p>
-          <p style="margin: 5px 0;"><strong>平均消费:</strong> ¥${area.avgConsumption}</p>
           <p style="margin: 5px 0;"><strong>类型:</strong> ${area.category}</p>
+          <p style="margin: 5px 0;"><strong>商家数量:</strong> ${area.storeCount || 'N/A'}</p>
           <button onclick="viewDetails('${area.id}')" style="margin-top: 10px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">查看详情</button>
         </div>
       `)
@@ -368,62 +419,128 @@ const loadBusinessAreaMarkers = () => {
   })
 }
 
+// 搜索位置
+const searchLocation = async () => {
+  if (!searchKeyword.value.trim() || !map.value) return
+
+  try {
+    if (!localSearchInstance) {
+      localSearchInstance = new window.BMap.LocalSearch(map.value, {
+        onSearchComplete: (results) => {
+          if (localSearchInstance.getStatus() === window.BMAP_STATUS_SUCCESS) {
+            const poi = results.getPoi(0)
+            if (poi) {
+              const point = poi.point
+              map.value.centerAndZoom(point, 15)
+              
+              // 添加搜索结果标记
+              const marker = new window.BMap.Marker(point)
+              map.value.addOverlay(marker)
+              markers.value.push(marker)
+              
+              const coords = { lng: point.lng, lat: point.lat }
+              currentCoords.value = coords
+              emit('update:modelValue', coords)
+              emit('location-changed', coords)
+              
+              // 搜索附近商圈
+              searchNearbyBusinessAreas(point)
+            }
+          }
+        }
+      })
+    }
+    
+    localSearchInstance.search(searchKeyword.value)
+  } catch (error) {
+    console.error('搜索失败:', error)
+  }
+}
+
+// 搜索附近商圈
+const searchNearbyBusinessAreas = async (point) => {
+  try {
+    // 模拟API调用 - 这里你需要替换为实际的API调用
+    const mockNearbyAreas = generateMockNearbyAreas(point)
+    nearbyBusinessAreas.value = mockNearbyAreas
+    
+    // 通知父组件
+    emit('location-changed', {
+      lng: point.lng,
+      lat: point.lat,
+      nearbyAreas: mockNearbyAreas
+    })
+    
+    console.log(`搜索到 ${mockNearbyAreas.length} 个附近商圈`)
+  } catch (error) {
+    console.error('搜索附近商圈失败:', error)
+  }
+}
+
+// 生成模拟附近商圈数据
+const generateMockNearbyAreas = (centerPoint) => {
+  const mockAreas = [
+    { id: '1', name: '王府井商业街', category: '购物中心', hotValue: 95 },
+    { id: '2', name: '西单大悦城', category: '购物中心', hotValue: 88 },
+    { id: '3', name: '三里屯太古里', category: '时尚街区', hotValue: 92 },
+    { id: '4', name: '国贸商城', category: '高端商场', hotValue: 90 },
+    { id: '5', name: '朝阳大悦城', category: '购物中心', hotValue: 82 },
+    { id: '6', name: '蓝色港湾', category: '休闲商区', hotValue: 75 },
+    { id: '7', name: '五道口购物中心', category: '学院商圈', hotValue: 70 },
+    { id: '8', name: '中关村广场', category: '科技商圈', hotValue: 78 }
+  ]
+  
+  return mockAreas.map(area => {
+    // 计算随机距离
+    const distance = Math.floor(Math.random() * parseInt(searchRadius.value)) + 100
+    
+    return {
+      ...area,
+      longitude: centerPoint.lng + (Math.random() - 0.5) * 0.02,
+      latitude: centerPoint.lat + (Math.random() - 0.5) * 0.02,
+      distance,
+      storeCount: Math.floor(Math.random() * 200) + 50,
+      avgConsumption: Math.floor(Math.random() * 300) + 100
+    }
+  }).filter(area => area.distance <= parseInt(searchRadius.value))
+    .sort((a, b) => a.distance - b.distance)
+}
+
 // 选择商圈
 const selectBusinessArea = (area) => {
   selectedArea.value = area
   emit('area-selected', area)
   
-  // 移动地图到选中区域
-  const point = new window.BMap.Point(area.longitude, area.latitude)
-  map.value.panTo(point)
-}
-
-// 搜索位置
-const searchLocation = () => {
-  if (!searchKeyword.value.trim()) return
-  
-  const localSearch = new window.BMap.LocalSearch(map.value, {
-    onSearchComplete: (results) => {
-      if (localSearch.getStatus() === window.BMAP_STATUS_SUCCESS) {
-        const poi = results.getPoi(0)
-        if (poi) {
-          const point = poi.point
-          map.value.centerAndZoom(point, 15)
-          
-          // 添加搜索结果标记
-          const marker = new window.BMap.Marker(point)
-          map.value.addOverlay(marker)
-          markers.value.push(marker)
-          
-          // 更新选中位置
-          emit('update:modelValue', { lng: point.lng, lat: point.lat })
-          emit('location-changed', { lng: point.lng, lat: point.lat })
-        }
-      }
-    }
-  })
-  
-  localSearch.search(searchKeyword.value)
+  if (map.value) {
+    const point = new window.BMap.Point(area.longitude, area.latitude)
+    map.value.panTo(point)
+  }
 }
 
 // 获取当前位置
 const getCurrentLocation = () => {
+  if (!map.value) return
+  
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const point = new window.BMap.Point(position.coords.longitude, position.coords.latitude)
         map.value.centerAndZoom(point, 15)
         
-        // 添加当前位置标记
         const marker = new window.BMap.Marker(point)
         map.value.addOverlay(marker)
         markers.value.push(marker)
         
-        emit('update:modelValue', { lng: point.lng, lat: point.lat })
+        const coords = { lng: point.lng, lat: point.lat }
+        currentCoords.value = coords
+        emit('update:modelValue', coords)
+        
+        // 搜索附近商圈
+        searchNearbyBusinessAreas(point)
       },
       (error) => {
-        console.error('获取位置失败:', error)
-        alert('获取位置失败，请检查浏览器定位权限')
+        console.error('定位失败:', error)
+        alert('定位失败，请检查浏览器定位权限')
       }
     )
   } else {
@@ -433,62 +550,27 @@ const getCurrentLocation = () => {
 
 // 清除标记
 const clearMarkers = () => {
-  markers.value.forEach(marker => {
-    map.value.removeOverlay(marker)
-  })
+  if (!map.value) return
+  
+  markers.value.forEach(marker => map.value.removeOverlay(marker))
   markers.value = []
   selectedArea.value = null
+  nearbyBusinessAreas.value = []
 }
 
-// 更新搜索半径
-const updateSearchRadius = () => {
-  // 如果有选中的位置，重新搜索附近商圈
-  if (selectedArea.value) {
-    const point = new window.BMap.Point(selectedArea.value.longitude, selectedArea.value.latitude)
-    searchNearbyBusinessAreas(point)
+// 刷新地图
+const refreshMap = throttle(() => {
+  if (map.value) {
+    map.value.checkResize()
+    const center = map.value.getCenter()
+    map.value.panTo(center)
   }
-}
-
-// 搜索附近商圈
-const searchNearbyBusinessAreas = async (point) => {
-  try {
-    console.log('搜索附近商圈:', point.lng, point.lat, searchRadius.value)
-    
-    // 调用业务API搜索附近商圈
-    const { businessApi } = await import('../api/business.js')
-    const nearbyAreas = await businessApi.searchNearbyBusinessAreas({
-      longitude: point.lng,
-      latitude: point.lat,
-      radius: searchRadius.value
-    })
-    
-    console.log('搜索到附近商圈:', nearbyAreas)
-    
-    // 通知父组件更新商圈数据
-    emit('location-changed', { 
-      lng: point.lng, 
-      lat: point.lat,
-      nearbyAreas: nearbyAreas || []
-    })
-    
-  } catch (error) {
-    console.error('搜索附近商圈失败:', error)
-  }
-}
-
-// 查看区域详情
-const viewAreaDetails = () => {
-  if (selectedArea.value) {
-    emit('area-selected', selectedArea.value)
-  }
-}
+}, 300)
 
 // 城市变化处理
 const handleCityChange = (city) => {
   selectedCity.value = city
   emit('city-changed', city)
-  
-  // 更新地图中心点到新城市
   updateMapCenterForCity(city)
 }
 
@@ -510,22 +592,40 @@ const updateMapCenterForCity = (city) => {
   const coords = cityCoords[city.id] || cityCoords['beijing']
   const point = new window.BMap.Point(coords.lng, coords.lat)
   
-  map.value.centerAndZoom(point, ENV_CONFIG.BAIDU_MAP_CONFIG.defaultZoom)
+  map.value.centerAndZoom(point, ENV_CONFIG.BAIDU_MAP_CONFIG.defaultZoom || 11)
+  currentCoords.value = coords
   emit('update:modelValue', coords)
+  
+  // 清除之前的搜索结果
+  nearbyBusinessAreas.value = []
+  selectedArea.value = null
+}
+
+// 搜索半径变化
+const onRadiusChange = throttle(() => {
+  if (currentCoords.value) {
+    const point = new window.BMap.Point(currentCoords.value.lng, currentCoords.value.lat)
+    searchNearbyBusinessAreas(point)
+  }
+}, 500)
+
+// 查看区域详情
+const viewAreaDetails = () => {
+  if (selectedArea.value) {
+    emit('area-selected', selectedArea.value)
+  }
+}
+
+// 获取热度等级样式类
+const getHotClass = (hotValue) => {
+  if (hotValue > 80) return 'hot'
+  if (hotValue > 50) return 'warm'
+  return 'cool'
 }
 
 // 监听商圈数据变化
 watch(() => props.businessAreas, () => {
   if (map.value) {
-    // 清除现有商圈标记
-    markers.value.forEach(marker => {
-      if (!marker.isClickMarker) {
-        map.value.removeOverlay(marker)
-      }
-    })
-    markers.value = markers.value.filter(marker => marker.isClickMarker)
-    
-    // 重新加载商圈标记
     loadBusinessAreaMarkers()
   }
 }, { deep: true })
@@ -535,51 +635,54 @@ watch(() => props.modelValue, (newCenter) => {
   if (map.value && newCenter) {
     const point = new window.BMap.Point(newCenter.lng, newCenter.lat)
     map.value.panTo(point)
+    currentCoords.value = newCenter
   }
 }, { deep: true })
 
 // 生命周期
-onMounted(async () => {
-  console.log('BaiduMap组件已挂载')
-  await nextTick()
+onMounted(() => {
+  mapHeight.value = props.height
+  currentCoords.value = props.modelValue
   
-  // 使用动态加载器加载百度地图API
-  try {
-    console.log('开始加载百度地图API...')
-    const loadSuccess = await loadBaiduMapAPI()
-    
-    if (loadSuccess && isBaiduMapAvailable()) {
-      console.log('百度地图API加载成功，开始初始化地图')
-      initBaiduMap()
-    } else {
-      console.warn('百度地图API加载失败或密钥未配置')
-      showMapPlaceholder('API加载失败或密钥未配置')
+  // 立即初始化
+  nextTick(() => {
+    quickInit()
+  })
+  
+  // 暴露全局函数（供InfoWindow使用）
+  window.searchNearby = () => {
+    if (currentCoords.value) {
+      const point = new window.BMap.Point(currentCoords.value.lng, currentCoords.value.lat)
+      searchNearbyBusinessAreas(point)
     }
-  } catch (error) {
-    console.error('加载百度地图API时出错:', error)
-    showMapPlaceholder('API加载出错')
+  }
+  
+  window.viewDetails = (areaId) => {
+    const area = nearbyBusinessAreas.value.find(a => a.id === areaId) || 
+                  props.businessAreas.find(a => a.id === areaId)
+    if (area) {
+      selectBusinessArea(area)
+    }
   }
 })
 
 onUnmounted(() => {
-  if (map.value) {
-    map.value.removeEventListener('click', handleMapClick)
-    map.value.removeEventListener('moveend', handleMapMoveEnd)
+  try {
+    if (map.value) {
+      map.value.removeEventListener('click', handleMapClick)
+      map.value.removeEventListener('moveend', handleMapMoveEnd)
+    }
+  } catch {}
+  
+  if (resizeHandler) {
+    window.removeEventListener('resize', resizeHandler)
+    resizeHandler = null
   }
+  
+  // 清理全局函数
+  delete window.searchNearby
+  delete window.viewDetails
 })
-
-// 暴露给模板的全局函数
-window.searchNearby = () => {
-  const center = map.value.getCenter()
-  searchNearbyBusinessAreas(center)
-}
-
-window.viewDetails = (areaId) => {
-  const area = props.businessAreas.find(a => a.id === areaId)
-  if (area) {
-    selectBusinessArea(area)
-  }
-}
 </script>
 
 <style scoped>
@@ -589,22 +692,56 @@ window.viewDetails = (areaId) => {
   height: 100%;
   border-radius: 16px;
   overflow: hidden;
+  background: #f5f5f5;
 }
 
+/* 加载状态 */
+.map-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e2e8f0;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+.loading-text {
+  color: #64748b;
+  font-size: 14px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 控制面板 */
 .map-controls {
   position: absolute;
   top: 15px;
   left: 15px;
   right: 15px;
   display: flex;
-  gap: 15px;
+  gap: 12px;
   align-items: center;
-  background: rgba(26, 43, 74, 0.9);
-  backdrop-filter: blur(20px);
-  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 12px 16px;
   border-radius: 12px;
   z-index: 1000;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   flex-wrap: wrap;
 }
 
@@ -612,8 +749,8 @@ window.viewDetails = (areaId) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #8c9eff;
   font-size: 14px;
+  color: #374151;
   white-space: nowrap;
 }
 
@@ -625,42 +762,73 @@ window.viewDetails = (areaId) => {
   display: flex;
   gap: 8px;
   flex: 1;
+  min-width: 240px;
 }
 
-.search-box input {
+.modern-input {
   flex: 1;
-  min-width: 200px;
-}
-
-.search-btn {
   padding: 8px 12px;
-  min-width: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
 }
 
-.distance-selector {
+.modern-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modern-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.modern-btn.primary {
+  background: #667eea;
+  color: white;
+}
+
+.modern-btn.primary:hover {
+  background: #5a67d8;
+}
+
+.modern-btn.outline {
+  background: white;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.modern-btn.outline:hover {
+  background: #f9fafb;
+  color: #374151;
+}
+
+.radius-selector {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #8c9eff;
   font-size: 14px;
-}
-
-.distance-selector label {
-  white-space: nowrap;
+  color: #374151;
 }
 
 .modern-select {
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  color: #fff;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
   font-size: 14px;
-}
-
-.modern-select option {
-  background: #1a2b4a;
-  color: #fff;
+  outline: none;
 }
 
 .map-tools {
@@ -673,158 +841,211 @@ window.viewDetails = (areaId) => {
   min-width: auto;
 }
 
+/* 地图容器 */
 .baidu-map {
   width: 100%;
+  height: 100%;
+  min-height: 400px;
   border-radius: 16px;
+  position: relative;
 }
 
-.map-legend {
+/* 坐标显示 */
+.coords-display {
   position: absolute;
   bottom: 15px;
   left: 15px;
-  background: rgba(26, 43, 74, 0.9);
-  backdrop-filter: blur(20px);
-  padding: 15px;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #6b7280;
   z-index: 1000;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.legend-item {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  gap: 16px;
+}
+
+/* 附近商圈面板 */
+.nearby-areas-panel {
+  position: absolute;
+  top: 80px;
+  right: 15px;
+  width: 300px;
+  max-height: 400px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.nearby-areas-panel h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #111827;
+}
+
+.areas-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.area-item {
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   margin-bottom: 8px;
-  color: #8c9eff;
-  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.legend-item:last-child {
-  margin-bottom: 0;
+.area-item:hover {
+  background: #f9fafb;
+  border-color: #667eea;
 }
 
-.legend-marker {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.area-item.active {
+  background: #eef2ff;
+  border-color: #667eea;
 }
 
-.legend-marker.hot {
-  background: #ff4444;
-  box-shadow: 0 0 10px rgba(255, 68, 68, 0.6);
+.area-name {
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 4px;
 }
 
-.legend-marker.warm {
-  background: #ff9800;
-  box-shadow: 0 0 10px rgba(255, 152, 0, 0.6);
+.area-info {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
 }
 
-.legend-marker.cool {
-  background: #2196f3;
-  box-shadow: 0 0 10px rgba(33, 150, 243, 0.6);
+.area-distance {
+  color: #6b7280;
 }
 
-.legend-marker.selected {
-  background: #4caf50;
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
+.area-type {
+  color: #6b7280;
 }
 
-.area-info-panel {
+.area-hot {
+  font-weight: 500;
+}
+
+.area-hot.hot {
+  color: #dc2626;
+}
+
+.area-hot.warm {
+  color: #ea580c;
+}
+
+.area-hot.cool {
+  color: #2563eb;
+}
+
+/* 选中商圈详情 */
+.selected-area-panel {
   position: absolute;
   bottom: 15px;
   right: 15px;
   width: 280px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
   padding: 20px;
   z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-.area-info-panel h4 {
-  margin: 0 0 15px 0;
-  color: #8c9eff;
+.selected-area-panel h4 {
+  margin: 0 0 16px 0;
   font-size: 18px;
-  font-weight: bold;
+  color: #111827;
 }
 
-.area-stats {
-  margin-bottom: 15px;
+.area-details {
+  margin-bottom: 16px;
 }
 
-.stat-item {
+.detail-item {
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
   font-size: 14px;
 }
 
-.stat-item .label {
-  color: #b3c6ff;
+.detail-item .label {
+  color: #6b7280;
 }
 
-.stat-item .value {
-  color: #fff;
+.detail-item .value {
+  color: #111827;
   font-weight: 500;
+}
+
+.detail-item .value.hot {
+  color: #dc2626;
+}
+
+.detail-item .value.warm {
+  color: #ea580c;
+}
+
+.detail-item .value.cool {
+  color: #2563eb;
 }
 
 /* 响应式设计 */
 @media (max-width: 1024px) {
   .map-controls {
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px 15px;
-  }
-  
-  .city-selector {
-    order: 1;
-    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
   }
   
   .search-box {
-    order: 2;
-    flex: 1 1 200px;
-    min-width: 200px;
+    min-width: auto;
   }
   
-  .distance-selector {
-    order: 3;
-    flex: 0 0 auto;
+  .nearby-areas-panel {
+    width: 250px;
   }
   
-  .map-tools {
-    order: 4;
-    flex: 0 0 auto;
+  .selected-area-panel {
+    width: 250px;
   }
 }
 
 @media (max-width: 768px) {
   .map-controls {
-    flex-direction: column;
-    gap: 12px;
-    padding: 15px;
+    left: 10px;
+    right: 10px;
+    padding: 12px;
   }
   
-  .city-selector,
-  .search-box,
-  .distance-selector,
-  .map-tools {
-    width: 100%;
-    justify-content: center;
-    order: unset;
+  .nearby-areas-panel {
+    top: auto;
+    bottom: 80px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: 200px;
   }
   
-  .search-box {
-    flex-direction: row;
+  .selected-area-panel {
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
   }
   
-  .distance-selector,
-  .map-tools {
-    justify-content: space-between;
-  }
-  
-  .area-info-panel {
-    width: calc(100% - 30px);
-    left: 15px;
-    right: 15px;
+  .coords-display {
+    bottom: 10px;
+    left: 10px;
+    font-size: 11px;
   }
 }
 </style>

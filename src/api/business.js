@@ -70,6 +70,26 @@ export const businessApi = {
   // 获取商圈分析数据
   getAreaAnalytics(areaId) {
     return http.get(`/business-areas/${areaId}/analytics`)
+  },
+
+  // 搜索并保存商圈数据（地图点击搜索专用）
+  searchAndSaveBusinessAreas(searchData) {
+    return http.post('/business-areas/search-and-save', searchData)
+  },
+
+  // 检查附近是否有缓存的商圈数据
+  checkNearbyCache(longitude, latitude, radius = 1000) {
+    return http.get('/business-areas/nearby', { longitude, latitude, radius })
+  },
+
+  // 爬取商圈详细数据（大众点评等）
+  crawlAreaDetails(areaId) {
+    return http.post(`/business-areas/${areaId}/crawl-details`)
+  },
+
+  // 检查商圈数据是否存在
+  checkAreaDataExists(areaId) {
+    return http.get(`/business-areas/${areaId}/check-data`)
   }
 }
 

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商圈详情爬取测试</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        pre {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1976d2;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>商圈详情爬取功能测试</h1>
+        <p>测试点击商圈详情按钮后的爬取和缓存功能</p>
+        
+        <div>
+            <h3>模拟商圈列表：</h3>
+            <button class="button" onclick="testCrawlDetails('area_test_001', '三里屯太古里')">
+                测试爬取：三里屯太古里
+            </button>
+            <button class="button" onclick="testCrawlDetails('area_test_002', '王府井步行街')">
+                测试爬取：王府井步行街
+            </button>
+            <button class="button" onclick="testCrawlDetails('area_test_003', '西单大悦城')">
+                测试爬取：西单大悦城
+            </button>
+            <button class="button" onclick="testCacheCheck('area_test_001')">
+                测试缓存：三里屯太古里
+            </button>
+        </div>
+
+        <div id="result"></div>
+        
+        <div id="stats" style="display: none;">
+            <h3>爬取统计：</h3>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalStores">0</div>
+                    <div class="stat-label">店铺总数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgRating">0</div>
+                    <div class="stat-label">平均评分</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="reviewCount">0</div>
+                    <div class="stat-label">评价数量</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="hotValue">0</div>
+                    <div class="stat-label">热度值</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        
+        async function testCrawlDetails(areaId, areaName) {
+            const resultDiv = document.getElementById('result');
+            const statsDiv = document.getElementById('stats');
+            
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <h4>正在爬取 ${areaName} 的详细数据...</h4>
+                    <p>请稍候，这可能需要几秒钟时间。</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`${API_BASE}/business-areas/${areaId}/crawl-details`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    displaySuccessResult(data.data, areaName);
+                    updateStats(data.data);
+                    statsDiv.style.display = 'block';
+                } else {
+                    displayErrorResult(data.message || '爬取失败', areaName);
+                }
+                
+            } catch (error) {
+                console.error('请求失败:', error);
+                displayErrorResult(`网络错误: ${error.message}`, areaName);
+            }
+        }
+        
+        async function testCacheCheck(areaId) {
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <h4>检查缓存数据...</h4>
+                    <p>查看是否有近期的缓存数据。</p>
+                </div>
+            `;
+            
+            try {
+                // 再次调用相同的接口，应该返回缓存数据
+                const response = await fetch(`${API_BASE}/business-areas/${areaId}/crawl-details`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const isCached = data.data.cached || data.data.data_source === 'database';
+                    displayCacheResult(data.data, isCached);
+                } else {
+                    displayErrorResult(data.message || '缓存检查失败', '缓存测试');
+                }
+                
+            } catch (error) {
+                console.error('缓存检查失败:', error);
+                displayErrorResult(`网络错误: ${error.message}`, '缓存测试');
+            }
+        }
+        
+        function displaySuccessResult(data, areaName) {
+            const resultDiv = document.getElementById('result');
+            const area = data.area || data;
+            const isFromCache = data.cached || data.data_source === 'database';
+            
+            resultDiv.innerHTML = `
+                <div class="result success">
+                    <h4>✅ ${areaName} 数据获取成功！</h4>
+                    <p><strong>数据源:</strong> ${isFromCache ? '数据库缓存' : '大众点评爬虫'}</p>
+                    <p><strong>商圈名称:</strong> ${area.name}</p>
+                    <p><strong>评分:</strong> ${area.rating}/5.0</p>
+                    <p><strong>评价数量:</strong> ${area.review_count || 0}</p>
+                    <p><strong>热度值:</strong> ${area.hot_value || area.hotValue || 0}</p>
+                    <p><strong>店铺数量:</strong> ${area.store_count || 0}</p>
+                    <p><strong>描述:</strong> ${area.description || '暂无描述'}</p>
+                    
+                    ${data.store_statistics ? `
+                        <h5>店铺统计:</h5>
+                        <ul>
+                            <li>总店铺数: ${data.store_statistics.total_stores}</li>
+                            <li>平均评分: ${data.store_statistics.avg_rating?.toFixed(1) || 0}</li>
+                            <li>推荐店铺: ${data.store_statistics.recommended_count}</li>
+                        </ul>
+                        
+                        ${Object.keys(data.store_statistics.by_category || {}).length > 0 ? `
+                            <h5>店铺类型分布:</h5>
+                            <ul>
+                                ${Object.entries(data.store_statistics.by_category).map(([category, count]) => 
+                                    `<li>${getCategoryName(category)}: ${count}家</li>`
+                                ).join('')}
+                            </ul>
+                        ` : ''}
+                    ` : ''}
+                    
+                    ${data.reviews_sample && data.reviews_sample.length > 0 ? `
+                        <h5>评价样本 (${data.reviews_sample.length}条):</h5>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                            ${data.reviews_sample.map(review => `
+                                <div style="border-bottom: 1px solid #eee; padding: 8px 0;">
+                                    <strong>${review.user_name}</strong> 
+                                    <span style="color: #ffa500;">${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)}</span>
+                                    <div style="font-size: 12px; color: #666; margin: 4px 0;">
+                                        ${review.content}
+                                    </div>
+                                    <small style="color: #999;">${review.date}</small>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <details style="margin-top: 15px;">
+                        <summary>查看完整数据 (JSON)</summary>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </details>
+                </div>
+            `;
+        }
+        
+        function displayCacheResult(data, isCached) {
+            const resultDiv = document.getElementById('result');
+            const area = data.area || data;
+            
+            resultDiv.innerHTML = `
+                <div class="result ${isCached ? 'success' : 'result'}">
+                    <h4>${isCached ? '✅ 缓存命中！' : '⚠️ 缓存未命中'}</h4>
+                    <p><strong>数据源:</strong> ${data.data_source || (isCached ? '数据库缓存' : '实时爬取')}</p>
+                    <p><strong>商圈:</strong> ${area.name}</p>
+                    <p><strong>最后更新:</strong> ${data.last_updated || data.crawl_time || '未知'}</p>
+                    
+                    ${isCached ? 
+                        '<p style="color: green;">✅ 数据来自缓存，响应速度快，2天内的数据被认为是新鲜的。</p>' :
+                        '<p style="color: orange;">⚠️ 缓存未命中，进行了实时爬取。</p>'
+                    }
+                </div>
+            `;
+        }
+        
+        function displayErrorResult(message, context) {
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = `
+                <div class="result error">
+                    <h4>❌ ${context} 失败</h4>
+                    <p><strong>错误信息:</strong> ${message}</p>
+                    <p><strong>可能原因:</strong></p>
+                    <ul>
+                        <li>后端服务未启动 (检查 http://localhost:3000)</li>
+                        <li>数据库连接问题</li>
+                        <li>API接口路径错误</li>
+                        <li>网络连接问题</li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        function updateStats(data) {
+            const area = data.area || data;
+            const stats = data.store_statistics || {};
+            
+            document.getElementById('totalStores').textContent = stats.total_stores || area.store_count || 0;
+            document.getElementById('avgRating').textContent = (stats.avg_rating || area.rating || 0).toFixed(1);
+            document.getElementById('reviewCount').textContent = area.review_count || 0;
+            document.getElementById('hotValue').textContent = area.hot_value || area.hotValue || 0;
+        }
+        
+        function getCategoryName(category) {
+            const categoryMap = {
+                'restaurant': '餐饮美食',
+                'retail': '购物零售',
+                'entertainment': '休闲娱乐',
+                'service': '生活服务'
+            };
+            return categoryMap[category] || category;
+        }
+        
+        // 页面加载完成后的提示
+        window.onload = function() {
+            console.log('商圈详情爬取测试页面已加载');
+            console.log('确保后端服务运行在 http://localhost:3000');
+        };
+    </script>
+</body>
+</html>

@@ -37,24 +37,7 @@
         </div>
       </div>
 
-      <!-- 当前定位 -->
-      <div class="location-section">
-        <button @click="getCurrentLocation" class="location-btn" :disabled="locating">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C13.1046 2 14 2.89543 14 4C14 5.10457 13.1046 6 12 6C10.8954 6 10 5.10457 10 4C10 2.89543 10.8954 2 12 2Z" fill="currentColor"/>
-            <path d="M12 22C13.1046 22 14 21.1046 14 20C14 18.8954 13.1046 18 12 18C10.8954 18 10 18.8954 10 20C10 21.1046 10.8954 22 12 22Z" fill="currentColor"/>
-            <path d="M2 12C2 13.1046 2.89543 14 4 14C5.10457 14 6 13.1046 6 12C6 10.8954 5.10457 10 4 10C2.89543 10 2 10.8954 2 12Z" fill="currentColor"/>
-            <path d="M22 12C22 13.1046 21.1046 14 20 14C18.8954 14 18 13.1046 18 12C18 10.8954 18.8954 10 20 10C21.1046 10 22 10.8954 22 12Z" fill="currentColor"/>
-            <path d="M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M8 12H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <span v-if="locating" class="modern-loading"></span>
-          {{ locating ? '定位中...' : '当前定位' }}
-        </button>
-        <div v-if="currentLocation" class="current-location">
-          <span>{{ currentLocation.name }}</span>
-        </div>
-      </div>
+
 
       <!-- 搜索结果 -->
       <div v-if="searchKeyword && searchResults.length > 0" class="search-results">
@@ -91,13 +74,19 @@
 
       <!-- 城市列表 -->
       <div v-if="!searchKeyword" class="city-list-section">
-        <div class="section-title">全部城市</div>
+        <div class="section-title">
+          全部城市
+          <span v-if="allCities.length > 0" class="city-count">({{ allCities.length }}个)</span>
+        </div>
         <div class="alphabet-nav">
           <div
             v-for="letter in alphabet"
             :key="letter"
             class="alphabet-item"
-            :class="{ active: currentLetter === letter }"
+            :class="{ 
+              active: currentLetter === letter,
+              'has-cities': cityGroups.some(g => g.letter === letter)
+            }"
             @click="scrollToLetter(letter)"
           >
             {{ letter }}
@@ -111,7 +100,10 @@
             :data-letter="group.letter"
             class="letter-group"
           >
-            <div class="letter-title">{{ group.letter }}</div>
+            <div class="letter-title">
+              {{ group.letter }}
+              <span class="letter-count">({{ group.cities.length }})</span>
+            </div>
             <div class="city-list">
               <div
                 v-for="city in group.cities"
@@ -142,7 +134,7 @@
 
 <script setup>
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
-import { cityApi } from '../api/city'
+import { cityApi } from '../api/city.js'
 
 // Props
 const props = defineProps({
@@ -153,7 +145,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['update:modelValue', 'change'])
+const emit = defineEmits(['update:modelValue', 'change', 'location-found'])
 
 // 响应式数据
 const showSelector = ref(false)
@@ -172,23 +164,63 @@ const currentLocation = ref(null)
 // 字母表
 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
+// 生成拼音首字母的辅助函数
+const generatePinyin = (name) => {
+  // 简单的城市名称到拼音的映射
+  const cityPinyinMap = {
+    '北京': 'beijing', '上海': 'shanghai', '广州': 'guangzhou', '深圳': 'shenzhen',
+    '杭州': 'hangzhou', '南京': 'nanjing', '武汉': 'wuhan', '成都': 'chengdu',
+    '天津': 'tianjin', '重庆': 'chongqing', '苏州': 'suzhou', '西安': 'xian',
+    '青岛': 'qingdao', '郑州': 'zhengzhou', '大连': 'dalian', '厦门': 'xiamen',
+    '济南': 'jinan', '宁波': 'ningbo', '石家庄': 'shijiazhuang', '沈阳': 'shenyang',
+    '长沙': 'changsha', '昆明': 'kunming', '福州': 'fuzhou', '无锡': 'wuxi',
+    '合肥': 'hefei', '哈尔滨': 'harbin', '长春': 'changchun', '温州': 'wenzhou',
+    '佛山': 'foshan', '东莞': 'dongguan', '太原': 'taiyuan', '南昌': 'nanchang'
+  }
+  
+  return cityPinyinMap[name] || name.toLowerCase()
+}
+
 // 计算属性
 const cityGroups = computed(() => {
   if (!allCities.value.length) return []
   
+  console.log('开始生成城市分组，总城市数:', allCities.value.length)
+  
   const groups = {}
+  
   allCities.value.forEach(city => {
-    const firstLetter = city.pinyin ? city.pinyin[0].toUpperCase() : 'Z'
+    let firstLetter = 'Z' // 默认分组
+    
+    if (city.pinyin) {
+      // 使用拼音首字母
+      firstLetter = city.pinyin[0].toUpperCase()
+    } else if (city.name) {
+      // 根据城市名称生成拼音
+      const pinyin = generatePinyin(city.name)
+      firstLetter = pinyin[0].toUpperCase()
+    }
+    
+    // 确保首字母是有效的字母
+    if (!/^[A-Z]$/.test(firstLetter)) {
+      firstLetter = 'Z'
+    }
+    
     if (!groups[firstLetter]) {
       groups[firstLetter] = []
     }
     groups[firstLetter].push(city)
   })
   
-  return Object.keys(groups).sort().map(letter => ({
+  // 按字母排序并统计
+  const sortedGroups = Object.keys(groups).sort().map(letter => ({
     letter,
-    cities: groups[letter]
+    cities: groups[letter].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
   }))
+  
+  console.log('城市分组结果:', sortedGroups.map(g => `${g.letter}: ${g.cities.length}个`).join(', '))
+  
+  return sortedGroups
 })
 
 // 监听props变化
@@ -199,20 +231,110 @@ watch(() => props.modelValue, (newValue) => {
 // 方法
 const loadHotCities = async () => {
   try {
+    console.log('开始加载热门城市...')
     const data = await cityApi.getHotCities()
-    hotCities.value = data || []
+    console.log('热门城市API返回数据:', data)
+    
+    // 处理不同的数据格式
+    let cities = []
+    if (data && data.success && data.data) {
+      cities = Array.isArray(data.data) ? data.data : []
+    } else if (Array.isArray(data)) {
+      cities = data
+    } else {
+      cities = []
+    }
+    
+    hotCities.value = cities
+      .filter(city => city && city.name)
+      .map(city => ({
+        id: city.id || city.city_id || `hot_${Math.random().toString(36).substr(2, 9)}`,
+        name: city.name,
+        pinyin: city.pinyin || city.pinyin_full || generatePinyin(city.name),
+        pinyin_abbr: city.pinyin_abbr || city.pinyin_short || '',
+        parentName: city.parent_name || city.province_name || city.province || '',
+        population: city.population || 0,
+        level: city.level || 'city',
+        longitude: city.longitude || city.lng,
+        latitude: city.latitude || city.lat,
+        isHot: true // 标记为热门城市
+      }))
+    
+    console.log('处理后的热门城市:', hotCities.value.length, '个城市')
+    
+    // 如果没有热门城市数据，使用默认数据
+    if (hotCities.value.length === 0) {
+      console.log('API未返回热门城市，使用默认数据')
+      hotCities.value = getDefaultHotCities()
+    }
   } catch (error) {
     console.error('加载热门城市失败:', error)
+    // 如果API失败，使用默认热门城市
+    hotCities.value = getDefaultHotCities()
   }
 }
 
 const loadAllCities = async () => {
   try {
     loading.value = true
-    const data = await cityApi.getCityList({ level: 'city' })
-    allCities.value = data || []
+    console.log('开始加载所有城市...')
+    
+    const data = await cityApi.getCityList({ 
+      level: 'city',
+      pageSize: 1000,  // 获取更多城市数据
+      _t: Date.now()   // 添加时间戳避免缓存
+    })
+    console.log('城市列表API返回数据:', data)
+    
+    // 处理不同的数据格式
+    let cities = []
+    if (data && data.success && data.data) {
+      // 标准响应格式 {success: true, data: {items: [...], total: 100}}
+      if (data.data.items && Array.isArray(data.data.items)) {
+        cities = data.data.items
+      } else if (Array.isArray(data.data)) {
+        cities = data.data
+      }
+    } else if (data && data.items && Array.isArray(data.items)) {
+      // 直接分页格式 {items: [...], total: 100}
+      cities = data.items
+    } else if (Array.isArray(data)) {
+      // 直接数组格式 [...]
+      cities = data
+    } else {
+      console.warn('未识别的城市数据格式:', data)
+      cities = []
+    }
+    
+    console.log('解析出的城市数据:', cities.length, '个城市')
+    
+    // 数据映射和清理
+    allCities.value = cities
+      .filter(city => city && city.name) // 过滤无效数据
+      .map(city => ({
+        id: city.id || city.city_id || `city_${Math.random().toString(36).substr(2, 9)}`,
+        name: city.name,
+        pinyin: city.pinyin || city.pinyin_full || generatePinyin(city.name),
+        pinyin_abbr: city.pinyin_abbr || city.pinyin_short || '',
+        parentName: city.parent_name || city.province_name || city.province || '',
+        population: city.population || 0,
+        level: city.level || 'city',
+        longitude: city.longitude || city.lng,
+        latitude: city.latitude || city.lat
+      }))
+      .sort((a, b) => {
+        // 按拼音排序，确保首字母分组正确
+        const pinyinA = a.pinyin || a.name
+        const pinyinB = b.pinyin || b.name
+        return pinyinA.localeCompare(pinyinB, 'zh-CN', { sensitivity: 'base' })
+      })
+    
+    console.log('处理并排序后的城市列表:', allCities.value.length, '个城市')
+    console.log('首批城市示例:', allCities.value.slice(0, 5))
   } catch (error) {
     console.error('加载城市列表失败:', error)
+    // 如果API失败，使用默认城市列表
+    allCities.value = getDefaultCities()
   } finally {
     loading.value = false
   }
@@ -225,8 +347,36 @@ const handleSearch = async () => {
   }
   
   try {
+    console.log('搜索城市:', searchKeyword.value)
     const data = await cityApi.searchCities(searchKeyword.value)
-    searchResults.value = data || []
+    console.log('搜索API返回结果:', data)
+    
+    // 处理搜索结果数据格式
+    let cities = []
+    if (data && data.success && data.data) {
+      cities = Array.isArray(data.data) ? data.data : []
+    } else if (Array.isArray(data)) {
+      cities = data
+    } else {
+      cities = []
+    }
+    
+    searchResults.value = cities
+      .filter(city => city && city.name)
+      .map(city => ({
+        id: city.id || city.city_id || `search_${Math.random().toString(36).substr(2, 9)}`,
+        name: city.name,
+        pinyin: city.pinyin || city.pinyin_full || generatePinyin(city.name),
+        pinyin_abbr: city.pinyin_abbr || city.pinyin_short || '',
+        parentName: city.parent_name || city.province_name || city.province || '',
+        population: city.population || 0,
+        level: city.level || 'city',
+        longitude: city.longitude || city.lng,
+        latitude: city.latitude || city.lat
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+    
+    console.log('处理后的搜索结果:', searchResults.value.length, '个城市')
   } catch (error) {
     console.error('搜索城市失败:', error)
     searchResults.value = []
@@ -250,10 +400,40 @@ const getCurrentLocation = async () => {
     async (position) => {
       try {
         const { longitude, latitude } = position.coords
+        console.log('获取到坐标:', longitude, latitude)
+        
         const data = await cityApi.getCityByLocation(longitude, latitude)
-        currentLocation.value = data
+        console.log('定位城市数据:', data)
+        
+        // 处理定位城市数据格式
         if (data) {
-          selectCity(data)
+          const locationCity = {
+            id: data.id || `location_${Date.now()}`,
+            name: data.name,
+            pinyin: data.pinyin || data.pinyin_full || generatePinyin(data.name),
+            pinyin_abbr: data.pinyin_abbr || data.pinyin_short || '',
+            parentName: data.parent_name || data.province_name || data.province || '',
+            population: data.population || 0,
+            longitude: longitude,
+            latitude: latitude
+          }
+          
+          currentLocation.value = locationCity
+          
+          // 发出定位事件，包含坐标信息
+          emit('location-found', {
+            city: locationCity,
+            coordinates: { longitude, latitude }
+          })
+          
+          selectCity(locationCity)
+        } else {
+          // 即使没有城市数据，也可以发出坐标信息
+          console.warn('未获取到城市数据，但有坐标信息')
+          emit('location-found', {
+            city: null,
+            coordinates: { longitude, latitude }
+          })
         }
       } catch (error) {
         console.error('获取定位城市失败:', error)
@@ -282,10 +462,20 @@ const selectCity = (city) => {
 }
 
 const scrollToLetter = (letter) => {
+  // 检查该字母下是否有城市
+  const hasCity = cityGroups.value.some(group => group.letter === letter)
+  if (!hasCity) {
+    console.log(`字母 ${letter} 下没有城市，跳过滚动`)
+    return
+  }
+  
   currentLetter.value = letter
   const element = cityListRef.value?.querySelector(`[data-letter="${letter}"]`)
   if (element) {
     element.scrollIntoView({ behavior: 'smooth' })
+    console.log(`滚动到字母 ${letter}`)
+  } else {
+    console.warn(`找不到字母 ${letter} 对应的元素`)
   }
 }
 
@@ -295,6 +485,37 @@ const formatPopulation = (population) => {
     return `${(population / 10000).toFixed(1)}万人`
   }
   return `${population}人`
+}
+
+// 默认热门城市数据（API失败时使用）
+const getDefaultHotCities = () => {
+  return [
+    { id: 'beijing', name: '北京', pinyin: 'beijing', pinyin_abbr: 'BJ', parentName: '北京市', population: 21542000 },
+    { id: 'shanghai', name: '上海', pinyin: 'shanghai', pinyin_abbr: 'SH', parentName: '上海市', population: 26317104 },
+    { id: 'guangzhou', name: '广州', pinyin: 'guangzhou', pinyin_abbr: 'GZ', parentName: '广东省', population: 15906000 },
+    { id: 'shenzhen', name: '深圳', pinyin: 'shenzhen', pinyin_abbr: 'SZ', parentName: '广东省', population: 13438800 },
+    { id: 'hangzhou', name: '杭州', pinyin: 'hangzhou', pinyin_abbr: 'HZ', parentName: '浙江省', population: 12196000 },
+    { id: 'nanjing', name: '南京', pinyin: 'nanjing', pinyin_abbr: 'NJ', parentName: '江苏省', population: 9423400 },
+    { id: 'wuhan', name: '武汉', pinyin: 'wuhan', pinyin_abbr: 'WH', parentName: '湖北省', population: 13648000 },
+    { id: 'chengdu', name: '成都', pinyin: 'chengdu', pinyin_abbr: 'CD', parentName: '四川省', population: 21192000 }
+  ]
+}
+
+// 默认城市列表数据（API失败时使用）
+const getDefaultCities = () => {
+  return [
+    ...getDefaultHotCities(),
+    { id: 'tianjin', name: '天津', pinyin: 'tianjin', pinyin_abbr: 'TJ', parentName: '天津市', population: 15618000 },
+    { id: 'chongqing', name: '重庆', pinyin: 'chongqing', pinyin_abbr: 'CQ', parentName: '重庆市', population: 32054159 },
+    { id: 'suzhou', name: '苏州', pinyin: 'suzhou', pinyin_abbr: 'SZ', parentName: '江苏省', population: 12952000 },
+    { id: 'xian', name: '西安', pinyin: 'xian', pinyin_abbr: 'XA', parentName: '陕西省', population: 12952907 },
+    { id: 'qingdao', name: '青岛', pinyin: 'qingdao', pinyin_abbr: 'QD', parentName: '山东省', population: 10071722 },
+    { id: 'zhengzhou', name: '郑州', pinyin: 'zhengzhou', pinyin_abbr: 'ZZ', parentName: '河南省', population: 12600574 },
+    { id: 'dalian', name: '大连', pinyin: 'dalian', pinyin_abbr: 'DL', parentName: '辽宁省', population: 7450785 },
+    { id: 'xiamen', name: '厦门', pinyin: 'xiamen', pinyin_abbr: 'XM', parentName: '福建省', population: 5163970 },
+    { id: 'jinan', name: '济南', pinyin: 'jinan', pinyin_abbr: 'JN', parentName: '山东省', population: 9202432 },
+    { id: 'ningbo', name: '宁波', pinyin: 'ningbo', pinyin_abbr: 'NB', parentName: '浙江省', population: 9404283 }
+  ]
 }
 
 // 生命周期
@@ -318,17 +539,17 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #374151;
+  border: 1px solid #4b5563;
   border-radius: 8px;
-  color: #fff;
+  color: #f3f4f6;
   transition: all 0.3s ease;
   min-width: 120px;
 }
 
 .current-city:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: #4b5563;
+  border-color: #60a5fa;
 }
 
 .current-city svg:last-child {
@@ -347,14 +568,14 @@ onMounted(() => {
   min-width: 400px;
   max-width: 500px;
   max-height: 600px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(31, 41, 55, 0.95);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(75, 85, 99, 0.3);
   border-radius: 16px;
   padding: 20px;
   z-index: 1000;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .selector-overlay {
@@ -379,52 +600,52 @@ onMounted(() => {
 .search-input-wrapper svg:first-child {
   position: absolute;
   left: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: #9ca3af;
   z-index: 2;
 }
 
 .search-input {
   width: 100%;
   padding: 12px 16px 12px 40px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #374151;
+  border: 1px solid #4b5563;
   border-radius: 8px;
-  color: #fff;
+  color: #f9fafb;
   font-size: 14px;
   transition: all 0.3s ease;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
-  background: rgba(255, 255, 255, 0.15);
+  border-color: #60a5fa;
+  background: #4b5563;
 }
 
 .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: #9ca3af;
 }
 
 .clear-btn {
   position: absolute;
   right: 8px;
   padding: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: #4b5563;
   border: none;
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.6);
+  color: #9ca3af;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .clear-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  background: #6b7280;
+  color: #f3f4f6;
 }
 
 .location-section {
   margin-bottom: 20px;
   padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #4b5563;
 }
 
 .location-btn {
@@ -432,18 +653,18 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #374151;
+  border: 1px solid #4b5563;
   border-radius: 8px;
-  color: #fff;
+  color: #f3f4f6;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .location-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: #4b5563;
+  border-color: #60a5fa;
 }
 
 .location-btn:disabled {
@@ -453,18 +674,47 @@ onMounted(() => {
 
 .current-location {
   margin-top: 8px;
-  padding: 8px 12px;
-  background: rgba(102, 126, 234, 0.2);
-  border-radius: 6px;
-  color: #fff;
-  font-size: 12px;
+  padding: 10px 12px;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+  color: #f3f4f6;
+}
+
+.location-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.location-info svg {
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+.location-coordinates {
+  font-size: 11px;
+  color: #9ca3af;
+  font-family: 'Courier New', monospace;
 }
 
 .section-title {
   font-size: 14px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: #f3f4f6;
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.city-count {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 400;
 }
 
 .hot-cities {
@@ -479,10 +729,10 @@ onMounted(() => {
 
 .city-tag {
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #374151;
+  border: 1px solid #4b5563;
   border-radius: 6px;
-  color: #fff;
+  color: #f3f4f6;
   font-size: 12px;
   text-align: center;
   cursor: pointer;
@@ -490,13 +740,13 @@ onMounted(() => {
 }
 
 .city-tag:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: #4b5563;
+  border-color: #60a5fa;
 }
 
 .city-tag.active {
-  background: rgba(102, 126, 234, 0.3);
-  border-color: #667eea;
+  background: rgba(59, 130, 246, 0.3);
+  border-color: #3b82f6;
 }
 
 .search-results,
@@ -511,7 +761,7 @@ onMounted(() => {
   gap: 4px;
   margin-bottom: 16px;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: #374151;
   border-radius: 8px;
 }
 
@@ -522,20 +772,30 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: #9ca3af;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.3s ease;
 }
 
 .alphabet-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: #4b5563;
+  color: #f3f4f6;
 }
 
 .alphabet-item.active {
-  background: rgba(102, 126, 234, 0.3);
-  color: #fff;
+  background: rgba(59, 130, 246, 0.3);
+  color: #f3f4f6;
+}
+
+.alphabet-item.has-cities {
+  color: #f3f4f6;
+  font-weight: 500;
+}
+
+.alphabet-item:not(.has-cities) {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .letter-group {
@@ -545,11 +805,23 @@ onMounted(() => {
 .letter-title {
   font-size: 14px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
+  color: #e5e7eb;
   margin-bottom: 8px;
   padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: #374151;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.letter-count {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 400;
+  background: rgba(156, 163, 175, 0.1);
+  padding: 2px 6px;
+  border-radius: 8px;
 }
 
 .city-list {
@@ -563,26 +835,31 @@ onMounted(() => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
+  background: #374151;
+  border: 1px solid #4b5563;
+  margin-bottom: 4px;
 }
 
 .city-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: #4b5563;
+  border-color: #60a5fa;
 }
 
 .city-item.active {
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
 }
 
 .city-name {
   font-size: 14px;
   font-weight: 500;
-  color: #fff;
+  color: #f3f4f6;
   margin-bottom: 2px;
 }
 
 .city-info {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: #d1d5db;
 }
 
 .loading-section {
@@ -591,7 +868,7 @@ onMounted(() => {
   justify-content: center;
   gap: 8px;
   padding: 20px;
-  color: rgba(255, 255, 255, 0.7);
+  color: #d1d5db;
 }
 
 /* 滚动条样式 */
@@ -604,21 +881,21 @@ onMounted(() => {
 .search-results::-webkit-scrollbar-track,
 .city-list-section::-webkit-scrollbar-track,
 .cities-by-letter::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: #374151;
   border-radius: 3px;
 }
 
 .search-results::-webkit-scrollbar-thumb,
 .city-list-section::-webkit-scrollbar-thumb,
 .cities-by-letter::-webkit-scrollbar-thumb {
-  background: rgba(102, 126, 234, 0.5);
+  background: #60a5fa;
   border-radius: 3px;
 }
 
 .search-results::-webkit-scrollbar-thumb:hover,
 .city-list-section::-webkit-scrollbar-thumb:hover,
 .cities-by-letter::-webkit-scrollbar-thumb:hover {
-  background: rgba(102, 126, 234, 0.7);
+  background: #3b82f6;
 }
 
 /* 响应式设计 */
